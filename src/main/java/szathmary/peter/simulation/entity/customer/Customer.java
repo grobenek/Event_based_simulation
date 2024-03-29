@@ -1,10 +1,11 @@
 package szathmary.peter.simulation.entity.customer;
 
 /** Created by petos on 21/03/2024. */
-public final class Customer {
+public final class Customer implements Comparable<Customer> {
   private CustomerType customerType;
   private double timeOfArrival;
   private double timeOfEnteringTicketQueue;
+  private double timeOfGettingTicket;
   private double timeOfEnteringServiceQueue;
   private double timeOfStartOfService;
   private double timeOfEnteringCheckoutQueue;
@@ -28,6 +29,15 @@ public final class Customer {
 
   public Customer setTimeOfEnteringTicketQueue(double timeOfEnteringTicketQueue) {
     this.timeOfEnteringTicketQueue = timeOfEnteringTicketQueue;
+    return this;
+  }
+
+  public double getTimeOfGettingTicket() {
+    return timeOfGettingTicket;
+  }
+
+  public Customer setTimeOfGettingTicket(double timeOfGettingTicket) {
+    this.timeOfGettingTicket = timeOfGettingTicket;
     return this;
   }
 
@@ -83,5 +93,25 @@ public final class Customer {
   public Customer setCustomerType(CustomerType customerType) {
     this.customerType = customerType;
     return this;
+  }
+
+  /**
+   * If customer types are equal, customers are compared by their ticker time, else Contract
+   * customer is always bigger than other types
+   *
+   * @param other the object to be compared.
+   * @return 1 if current is bigger, 0 if same and -1 if current is lower
+   */
+  @Override
+  public int compareTo(Customer other) {
+    if (this.customerType == other.getCustomerType()) {
+      return Double.compare(getTimeOfGettingTicket(), other.getTimeOfGettingTicket());
+    }
+
+    if (customerType == CustomerType.CONTRACT) {
+      return 1;
+    } else {
+      return -1;
+    }
   }
 }
