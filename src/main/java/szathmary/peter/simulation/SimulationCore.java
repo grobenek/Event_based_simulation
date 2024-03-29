@@ -9,7 +9,7 @@ public abstract class SimulationCore {
   private final boolean verboseSimulation;
   private volatile boolean isRunning = true;
   private double currentTime;
-  private volatile double sleepEventInterval = 100;
+  private volatile double sleepEventInterval = 1000;
   private volatile long sleepEventDuration = 1000;
 
   public SimulationCore(long numberOfReplications, boolean verboseSimulation) {
