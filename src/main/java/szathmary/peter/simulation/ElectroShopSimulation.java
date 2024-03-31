@@ -1,30 +1,37 @@
 package szathmary.peter.simulation;
 
 import java.util.*;
+import java.util.stream.IntStream;
+import szathmary.peter.event.InitialEvent;
 import szathmary.peter.randomgenerators.continuousgenerators.ContinuousEmpiricRandomGenerator;
 import szathmary.peter.randomgenerators.continuousgenerators.ContinuousExponentialRandomGenerator;
 import szathmary.peter.randomgenerators.continuousgenerators.ContinuousTriangularRandomGenerator;
 import szathmary.peter.randomgenerators.continuousgenerators.ContinuousUniformGenerator;
 import szathmary.peter.randomgenerators.discretegenerators.DiscreteEmpiricRandomGenerator;
-import szathmary.peter.randomgenerators.discretegenerators.DiscreteUniformRandomGenerator;
 import szathmary.peter.randomgenerators.empiricnumbergenerator.EmpiricOption;
-import szathmary.peter.simulation.entity.CashRegister;
 import szathmary.peter.simulation.entity.ServiceStation;
+import szathmary.peter.simulation.entity.cashregister.CashRegister;
 import szathmary.peter.simulation.entity.customer.Customer;
 import szathmary.peter.simulation.entity.customer.CustomerType;
+import szathmary.peter.statistic.DiscreteStatistic;
+import szathmary.peter.statistic.Statistic;
 
-/** Created by petos on 23/03/2024.<br>
+/**
+ * Created by petos on 23/03/2024.<br>
  * Simulation time is in <b>SECONDS</b>
- * */
+ */
 public class ElectroShopSimulation extends SimulationCore {
-  public static final double CLOSING_HOURS_OF_TICKET_MACHINE = 17.0 * 60 * 60;
+  public static final double CLOSING_HOURS_OF_TICKET_MACHINE = 8 * 60 * 60;
   public static final int SERVICE_STATION_QUEUE_CAPACITY = 8;
   public static final double
       RATIO_OF_CASUAL_AND_CONTRACT_SERVICE_STATION_VS_ONLINE_SERVICE_STATIONS = 2.0 / 3.0;
+  private List<Customer> allCustomerList;
+  private final int numberOfServiceStations;
+  private final int numberOfCashRegisters;
   private final ContinuousExponentialRandomGenerator timeBetweenCustomerArrivalsRandomGenerator =
-      new ContinuousExponentialRandomGenerator(30.0 / 60.0 / 60.0);
-  private final DiscreteUniformRandomGenerator customerTypeGenerator =
-      new DiscreteUniformRandomGenerator(0, 101);
+      new ContinuousExponentialRandomGenerator(1.0 / (30.0 / 60.0 / 60.0));
+  private final ContinuousUniformGenerator customerTypeGenerator =
+      new ContinuousUniformGenerator(0, 1);
   private final ContinuousUniformGenerator ticketPrintingTimeRandomGenerator =
       new ContinuousUniformGenerator(30, 180);
   private final ContinuousUniformGenerator
@@ -32,23 +39,21 @@ public class ElectroShopSimulation extends SimulationCore {
           new ContinuousUniformGenerator(60, 900);
   private final ContinuousTriangularRandomGenerator
       timeForFinishOrderForOnlineCustomerRandomGenerator =
-          new ContinuousTriangularRandomGenerator(1, 2, 8);
-  private final DiscreteUniformRandomGenerator orderSizeRandomGenerator =
-      new DiscreteUniformRandomGenerator(0, 101);
+          new ContinuousTriangularRandomGenerator(60, 120, 480);
+  private final ContinuousUniformGenerator orderSizeRandomGenerator =
+      new ContinuousUniformGenerator(0, 1);
   private final ContinuousUniformGenerator timeForTakeBigOrderRandomGenerator =
       new ContinuousUniformGenerator(30, 70);
-  private final DiscreteUniformRandomGenerator paymentTypeRandomGenerator =
-      new DiscreteUniformRandomGenerator(0, 101);
   private final DiscreteEmpiricRandomGenerator paymentTimeRandomGenerator =
       new DiscreteEmpiricRandomGenerator(
-          List.of(new EmpiricOption<>(180, 481, 0.4), new EmpiricOption<>(180, 361, 0.6)));
-  private final DiscreteUniformRandomGenerator typeOfOrderRandomGenerator =
-      new DiscreteUniformRandomGenerator(0, 101);
+          List.of(new EmpiricOption<>(180, 480, 0.4), new EmpiricOption<>(180, 360, 0.6)));
+  private final ContinuousUniformGenerator typeOfOrderRandomGenerator =
+      new ContinuousUniformGenerator(0, 1);
   private final ContinuousEmpiricRandomGenerator easyOrderTimeRandomGenerator =
       new ContinuousEmpiricRandomGenerator(
           List.of(
               new EmpiricOption<>(2.0 * 60, 5.0 * 60, 0.6),
-              new EmpiricOption<>(5.0 * 60, 9.0 * 60, 0.3)));
+              new EmpiricOption<>(5.0 * 60, 9.0 * 60, 0.4)));
   private final ContinuousUniformGenerator mediumOrderTimeRandomGenerator =
       new ContinuousUniformGenerator(9 * 60, 11 * 60);
   private final ContinuousEmpiricRandomGenerator hardOrderTimeRandomGenerator =
@@ -58,11 +63,19 @@ public class ElectroShopSimulation extends SimulationCore {
               new EmpiricOption<>(12.0 * 60, 20.0 * 60, 0.6),
               new EmpiricOption<>(20.0 * 60, 25.0 * 60, 0.3)));
 
-  private final Queue<Customer> ticketMachineQueue;
-  private final List<ServiceStation> serviceStations;
-  private final List<CashRegister> cashRegisters;
-  private final PriorityQueue<Customer> casualAndContractCustomerQueue;
-  private final Queue<Customer> onlineCustomersQueue;
+  private final ContinuousUniformGenerator emptyCashRegistersChoosingRandomGenerator =
+      new ContinuousUniformGenerator(0, 1);
+  private final ContinuousUniformGenerator equalQueueCashRegistersChoosingRandomgenerator =
+      new ContinuousUniformGenerator(0, 1);
+  private final Statistic timeInSystemStatisticReplications;
+  private final Statistic timeInSystemStatisticSummary;
+  private final Statistic timeInTicketQueueSummary;
+  private final Statistic timeInTicketQueueReplications;
+  private Queue<Customer> ticketMachineQueue;
+  private List<ServiceStation> serviceStations;
+  private List<CashRegister> cashRegisters;
+  private PriorityQueue<Customer> casualAndContractCustomerQueue;
+  private Queue<Customer> onlineCustomersQueue;
   private boolean isTicketMachineServingCustomer;
   private boolean isTicketMachineStopped;
 
@@ -72,6 +85,21 @@ public class ElectroShopSimulation extends SimulationCore {
       int numberOfCashRegisters,
       boolean verboseSimulation) {
     super(numberOfReplications, verboseSimulation);
+
+    this.numberOfCashRegisters = numberOfCashRegisters;
+    this.numberOfServiceStations = numberOfServiceStations;
+
+    initializeVariables();
+
+    this.timeInSystemStatisticReplications = new DiscreteStatistic();
+    this.timeInSystemStatisticSummary = new DiscreteStatistic();
+
+    this.timeInTicketQueueReplications = new DiscreteStatistic();
+    this.timeInTicketQueueSummary = new DiscreteStatistic();
+  }
+
+  private void initializeVariables() {
+    this.allCustomerList = new ArrayList<>();
 
     this.isTicketMachineServingCustomer = false;
     this.isTicketMachineStopped = false;
@@ -105,19 +133,93 @@ public class ElectroShopSimulation extends SimulationCore {
   }
 
   @Override
-  public void afterReplications() {}
+  public void afterReplications() {
+    System.out.println(timeInSystemStatisticSummary);
+    System.out.println(timeInTicketQueueSummary);
+  }
 
   @Override
-  public void afterReplication() {}
+  public void afterReplication() {
+    timeInSystemStatisticSummary.addObservation(timeInSystemStatisticReplications.getMean());
+    timeInTicketQueueSummary.addObservation(timeInTicketQueueReplications.getMean());
+  }
 
   @Override
-  public void replication() {}
+  public void replication() {
+    while (!isEventCalendarEmpty()) {
+      simulateEvent();
+    }
+  }
 
   @Override
-  public void beforeReplication() {}
+  public void beforeReplication() {
+    initializeVariables();
+
+    timeInSystemStatisticReplications.clear();
+    timeInTicketQueueReplications.clear();
+    addStartingEvent();
+  }
+
+  private void addStartingEvent() {
+    addEvent(new InitialEvent(getCurrentTime()));
+  }
 
   @Override
   public void beforeReplications() {}
+
+  public boolean isServiceQueueFull() {
+    return onlineCustomersQueue.size() + casualAndContractCustomerQueue.size() == 8;
+  }
+
+  public boolean isAtLeastOneOnlineServiceFree() {
+    Optional<ServiceStation> freeServingStation =
+        serviceStations.stream()
+            .filter(station -> station.isServingOnlineCustomers() && (!station.isServing()))
+            .findFirst();
+
+    return freeServingStation.isPresent();
+  }
+
+  public boolean isAtLeastOneCausualAndContractServiceFree() {
+    Optional<ServiceStation> freeServingStation =
+        serviceStations
+            .stream() // TODO toto potom refactornut na boolean parameter ktory zistuje ci ma byt
+            // online ci nie
+            .filter(station -> (!station.isServingOnlineCustomers()) && (!station.isServing()))
+            .findFirst();
+
+    return freeServingStation.isPresent();
+  }
+
+  public ServiceStation getFreeCasualAndContractServiceStation() {
+    Optional<ServiceStation> freeServingStation =
+        serviceStations
+            .stream() // TODO toto potom refactornut na boolean parameter ktory zistuje ci ma byt
+            // online ci nie
+            .filter(station -> (!station.isServingOnlineCustomers()) && (!station.isServing()))
+            .findFirst();
+
+    return freeServingStation.orElseThrow(
+        () ->
+            new IllegalStateException(
+                "Cannot get free casual and contract station, because non is free!"));
+  }
+
+  public ServiceStation getFreeOnlineServiceStation() {
+    Optional<ServiceStation> freeServingStation =
+        serviceStations
+            .stream() // TODO toto potom refactornut na boolean parameter ktory zistuje ci ma byt
+            // online ci nie
+            .filter(station -> (station.isServingOnlineCustomers()) && (!station.isServing()))
+            .findFirst();
+
+    return freeServingStation.orElseThrow(
+        () -> new IllegalStateException("Cannot get online station, because non is free!"));
+  }
+
+  public boolean isOnlineCustomerQueueEmpty() {
+    return onlineCustomersQueue.isEmpty();
+  }
 
   public boolean isTicketMachineStopped() {
     return isTicketMachineStopped;
@@ -132,21 +234,28 @@ public class ElectroShopSimulation extends SimulationCore {
     return isTicketMachineServingCustomer;
   }
 
-  public ElectroShopSimulation setTicketMachineServingCustomer(boolean ticketMachineServingCustomer) {
+  public ElectroShopSimulation setTicketMachineServingCustomer(
+      boolean ticketMachineServingCustomer) {
     isTicketMachineServingCustomer = ticketMachineServingCustomer;
     return this;
   }
 
   public void addCustomerToTicketQueue(Customer customer) {
+    customer.setTimeOfEnteringTicketQueue(getCurrentTime());
+    allCustomerList.add(customer);
+
     ticketMachineQueue.add(customer);
   }
 
   public Customer removeCustomerFromTicketQueue() {
     if (ticketMachineQueue.isEmpty()) {
-      throw new IllegalStateException("Cannot remove customer from ticket machine queue, because queue is empty!");
+      throw new IllegalStateException(
+          "Cannot remove customer from ticket machine queue, because queue is empty!");
     }
 
-    return ticketMachineQueue.poll();
+    Customer removedCustomer = ticketMachineQueue.poll();
+    removedCustomer.setTimeOfLeavingTicketQueue(getCurrentTime());
+    return removedCustomer;
   }
 
   public boolean isTicketQueueEmpty() {
@@ -242,7 +351,7 @@ public class ElectroShopSimulation extends SimulationCore {
     return timeBetweenCustomerArrivalsRandomGenerator;
   }
 
-  public DiscreteUniformRandomGenerator getCustomerTypeGenerator() {
+  public ContinuousUniformGenerator getCustomerTypeGenerator() {
     return customerTypeGenerator;
   }
 
@@ -260,7 +369,7 @@ public class ElectroShopSimulation extends SimulationCore {
     return timeForFinishOrderForOnlineCustomerRandomGenerator;
   }
 
-  public DiscreteUniformRandomGenerator getOrderSizeRandomGenerator() {
+  public ContinuousUniformGenerator getOrderSizeRandomGenerator() {
     return orderSizeRandomGenerator;
   }
 
@@ -268,15 +377,11 @@ public class ElectroShopSimulation extends SimulationCore {
     return timeForTakeBigOrderRandomGenerator;
   }
 
-  public DiscreteUniformRandomGenerator getPaymentTypeRandomGenerator() {
-    return paymentTypeRandomGenerator;
-  }
-
   public DiscreteEmpiricRandomGenerator getPaymentTimeRandomGenerator() {
     return paymentTimeRandomGenerator;
   }
 
-  public DiscreteUniformRandomGenerator getTypeOfOrderRandomGenerator() {
+  public ContinuousUniformGenerator getTypeOfOrderRandomGenerator() {
     return typeOfOrderRandomGenerator;
   }
 
@@ -290,5 +395,80 @@ public class ElectroShopSimulation extends SimulationCore {
 
   public ContinuousEmpiricRandomGenerator getHardOrderTimeRandomGenerator() {
     return hardOrderTimeRandomGenerator;
+  }
+
+  public boolean isCasualContractCustomerQueueEmpty() {
+    return casualAndContractCustomerQueue.isEmpty();
+  }
+
+  public ContinuousUniformGenerator getEmptyCashRegistersChoosingRandomGenerator() {
+    return emptyCashRegistersChoosingRandomGenerator;
+  }
+
+  public ContinuousUniformGenerator getEqualQueueCashRegistersChoosingRandomgenerator() {
+    return equalQueueCashRegistersChoosingRandomgenerator;
+  }
+
+  public CashRegister getEligebleCashRegister() {
+    // check how many cash registers are not serving anyone
+    List<CashRegister> freeCashRegisters =
+        cashRegisters.stream().filter(cashRegister -> !cashRegister.isServing()).toList();
+
+    if (!freeCashRegisters.isEmpty()) {
+      return freeCashRegisters.get(
+          generateCashRegisterFromAvailableOptions(
+              emptyCashRegistersChoosingRandomGenerator.sample(), freeCashRegisters.size()));
+    }
+
+    // no cash register is free, checking queues length
+
+    int[] cashRegistersQueueLength =
+        cashRegisters.stream().mapToInt(CashRegister::getQueueLength).toArray();
+
+    // cheking if there are multiple minimum lengths of queues
+    int minValue =
+        Arrays.stream(cashRegistersQueueLength)
+            .min()
+            .orElseThrow(
+                () -> new IllegalStateException("No cash register with minimal value was found!"));
+
+    int[] minValuesIndeces =
+        IntStream.range(0, cashRegistersQueueLength.length)
+            .filter(index -> cashRegistersQueueLength[index] == minValue)
+            .toArray();
+
+    if (minValuesIndeces.length == 1) {
+      return cashRegisters.get(minValuesIndeces[0]);
+    } else {
+      return cashRegisters.get(
+          generateCashRegisterFromAvailableOptions(
+              equalQueueCashRegistersChoosingRandomgenerator.sample(), minValuesIndeces.length));
+    }
+  }
+
+  private int generateCashRegisterFromAvailableOptions(double sample, int numberOfCashRegisters) {
+    double cummulatedProbability = 0.0;
+    int selectedFreeCashRegister = -1;
+    for (int i = 0; i < numberOfCashRegisters; i++) {
+      cummulatedProbability += 1.0 / numberOfCashRegisters;
+
+      if (sample <= cummulatedProbability) {
+        selectedFreeCashRegister = i;
+        break;
+      }
+    }
+
+    if (selectedFreeCashRegister == -1) {
+      throw new IllegalStateException("No cash register was selected!");
+    }
+    return selectedFreeCashRegister;
+  }
+
+  public Statistic getTimeInSystemStatisticReplications() {
+    return timeInSystemStatisticReplications;
+  }
+
+  public Statistic getTimeInTicketQueueReplications() {
+    return timeInTicketQueueReplications;
   }
 }

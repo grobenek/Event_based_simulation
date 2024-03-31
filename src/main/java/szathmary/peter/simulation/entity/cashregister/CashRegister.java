@@ -1,4 +1,4 @@
-package szathmary.peter.simulation.entity;
+package szathmary.peter.simulation.entity.cashregister;
 
 import java.util.LinkedList;
 import java.util.Queue;
@@ -48,8 +48,16 @@ public class CashRegister {
     return currentServedCustomer;
   }
 
+  public int getQueueLength() {
+    return cashRegisterQueue.size();
+  }
+
   public CashRegister setCurrentServedCustomer(Customer currentServedCustomer) {
     this.currentServedCustomer = currentServedCustomer;
     return this;
+  }
+
+  public boolean isQueueEmpty() {
+    return cashRegisterQueue.isEmpty();
   }
 }

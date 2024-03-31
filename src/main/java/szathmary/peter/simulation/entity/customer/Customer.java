@@ -1,10 +1,16 @@
 package szathmary.peter.simulation.entity.customer;
 
+import szathmary.peter.simulation.entity.ServiceStation;
+import szathmary.peter.simulation.entity.order.OrderSize;
+
 /** Created by petos on 21/03/2024. */
 public final class Customer implements Comparable<Customer> {
+  private ServiceStation serviceStationThatServedCustomer;
+  private OrderSize orderSize;
   private CustomerType customerType;
   private double timeOfArrival;
   private double timeOfEnteringTicketQueue;
+  private double timeOfLeavingTicketQueue;
   private double timeOfGettingTicket;
   private double timeOfEnteringServiceQueue;
   private double timeOfStartOfService;
@@ -92,6 +98,33 @@ public final class Customer implements Comparable<Customer> {
 
   public Customer setCustomerType(CustomerType customerType) {
     this.customerType = customerType;
+    return this;
+  }
+
+  public OrderSize getOrderSize() {
+    return orderSize;
+  }
+
+  public Customer setOrderSize(OrderSize orderSize) {
+    this.orderSize = orderSize;
+    return this;
+  }
+
+  public ServiceStation getServiceStationThatServedCustomer() {
+    return serviceStationThatServedCustomer;
+  }
+
+  public Customer setServiceStationThatServedCustomer(ServiceStation serviceStationThatServedCustomer) {
+    this.serviceStationThatServedCustomer = serviceStationThatServedCustomer;
+    return this;
+  }
+
+  public double getTimeOfLeavingTicketQueue() {
+    return timeOfLeavingTicketQueue;
+  }
+
+  public Customer setTimeOfLeavingTicketQueue(double timeOfLeavingTicketQueue) {
+    this.timeOfLeavingTicketQueue = timeOfLeavingTicketQueue;
     return this;
   }
 
