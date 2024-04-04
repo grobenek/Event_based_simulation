@@ -1,16 +1,21 @@
 package szathmary.peter.simulation;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.PriorityQueue;
 import szathmary.peter.event.Event;
+import szathmary.peter.event.SleepEvent;
 
 public abstract class SimulationCore {
   protected final PriorityQueue<Event> eventCalendar;
   private final long numberOfReplications;
-  private final boolean verboseSimulation;
+  private volatile boolean verboseSimulation;
   private volatile boolean isRunning = true;
+  private volatile boolean isStopped = false;
   private double currentTime;
-  private volatile double sleepEventInterval = 100; //TODO zmenit
-  private volatile long sleepEventDuration = 0;
+  private volatile double sleepEventInterval = 0.01;
+  private volatile long sleepEventDuration = 10;
+  private long currentReplication = 1;
 
   public SimulationCore(long numberOfReplications, boolean verboseSimulation) {
     this.numberOfReplications = numberOfReplications;
@@ -21,16 +26,21 @@ public abstract class SimulationCore {
   }
 
   public void startSimulation() {
-    beforeReplications();
-    for (int i = 0; i < numberOfReplications; i++) {
-      if (!isRunning) {
-        break;
+    if (isStopped) {
+      setStopped(false);
+    } else {
+      beforeReplications();
+      for (int i = 0; i < numberOfReplications; i++) {
+        if (!isRunning) {
+          break;
+        }
+        beforeReplication();
+        replication();
+        afterReplication();
+        currentReplication++;
       }
-      beforeReplication();
-      replication();
-      afterReplication();
+      afterReplications();
     }
-    afterReplications();
   }
 
   protected void simulateEvent() {
@@ -50,10 +60,6 @@ public abstract class SimulationCore {
     }
 
     currentTime = timeOfEvent;
-
-    if (isVerbose()) {
-      System.out.println(currentEvent.getEventDescription());
-    }
 
     currentEvent.execute(this);
   }
@@ -98,6 +104,29 @@ public abstract class SimulationCore {
   public SimulationCore setSleepEventDuration(long sleepEventDuration) {
     this.sleepEventDuration = sleepEventDuration;
     return this;
+  }
+
+  public SimulationCore setVerboseSimulation(boolean verboseSimulation) {
+    this.verboseSimulation = verboseSimulation;
+
+    if (verboseSimulation) {
+      addEvent(new SleepEvent(getCurrentTime()));
+    }
+
+    return this;
+  }
+
+  public SimulationCore setStopped(boolean stopped) {
+    isStopped = stopped;
+    return this;
+  }
+
+  protected boolean getIsStopped() {
+    return isStopped;
+  }
+
+  protected long getCurrentReplication() {
+    return currentReplication;
   }
 
   public abstract void afterReplications();

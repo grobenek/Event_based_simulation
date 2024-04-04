@@ -1,18 +1,18 @@
 package szathmary.peter.simulation.entity;
 
-import java.util.PriorityQueue;
 import szathmary.peter.simulation.entity.customer.Customer;
 import szathmary.peter.simulation.entity.employee.Employee;
+import szathmary.peter.simulation.entity.employee.EmployeeType;
 
 /** Created by petos on 29/03/2024. */
 public class ServiceStation {
   private final Employee employee;
+  private final boolean isServingOnlineCustomers;
   private boolean isServing;
   private Customer currentServedCustomer;
-  private final boolean isServingOnlineCustomers;
 
   public ServiceStation(boolean isServingOnlineCustomers) {
-    this.employee = new Employee();
+    this.employee = new Employee(EmployeeType.SERVICE_STATION);
     this.isServing = false;
     this.currentServedCustomer = null;
     this.isServingOnlineCustomers = isServingOnlineCustomers;

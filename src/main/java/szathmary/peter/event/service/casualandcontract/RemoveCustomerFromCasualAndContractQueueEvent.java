@@ -4,6 +4,7 @@ import szathmary.peter.event.Event;
 import szathmary.peter.simulation.ElectroShopSimulation;
 import szathmary.peter.simulation.SimulationCore;
 import szathmary.peter.simulation.entity.customer.Customer;
+import szathmary.peter.util.TimeFormatter;
 
 /** Created by petos on 30/03/2024. */
 public class RemoveCustomerFromCasualAndContractQueueEvent extends Event {
@@ -22,11 +23,8 @@ public class RemoveCustomerFromCasualAndContractQueueEvent extends Event {
 
     Customer customerToServe =
         electroShopSimulation.removeCustomerFromCasualAndContractCustomerQueue();
-    customerToServe.setTimeOfEnteringServiceQueue(getTimestamp());
 
     electroShopSimulation.setTicketMachineStopped(false);
-
-    // TODO pokracovat v startovani service
 
     electroShopSimulation.addEvent(
         new StartOfCasualAndContractCustomerServiceEvent(getTimestamp(), customerToServe));
@@ -34,6 +32,6 @@ public class RemoveCustomerFromCasualAndContractQueueEvent extends Event {
 
   @Override
   public String getEventDescription() {
-    return String.format("Removing customer from casual and contract queue at %f", getTimestamp());
+    return String.format("Removing customer from casual and contract queue at %s", TimeFormatter.getFormattedTime(getTimestamp()));
   }
 }

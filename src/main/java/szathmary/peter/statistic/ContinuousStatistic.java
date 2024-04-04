@@ -2,15 +2,16 @@ package szathmary.peter.statistic;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.IntStream;
 
 /** Created by petos on 20/03/2024. */
 public class ContinuousStatistic extends Statistic {
-  private final List<Double> timestampsOfObservations;
+  private double weightedSum;
+  private double timestampSum;
 
-  public ContinuousStatistic() {
-    super();
-    this.timestampsOfObservations = new ArrayList<>(100);
+  public ContinuousStatistic(String name) {
+    super(name);
+    this.weightedSum = 0;
+    this.timestampSum = 0;
   }
 
   @Override
@@ -24,31 +25,26 @@ public class ContinuousStatistic extends Statistic {
     updateSum(observation);
     updateMin(observation);
     updateMax(observation);
+    updateMean(observation, time);
 
     observations.add(observation);
-    timestampsOfObservations.add(time);
   }
 
   @Override
-  public double getMean() {
-    if (observations.isEmpty()) {
-      throw new IllegalStateException("Cannot calculate mean from empty observations!");
-    }
+  protected void updateMean(double observation) {
+    throw new UnsupportedOperationException(
+        "Cannot update mean without time in ContinuousStatistic!");
+  }
 
-    double weightedSum =
-        IntStream.range(0, timestampsOfObservations.size())
-            .mapToDouble(index -> observations.get(index) * timestampsOfObservations.get(index))
-            .sum();
+  protected void updateMean(double observation, double timestamp) {
+    weightedSum += observation * timestamp;
+    timestampSum += timestamp;
 
-    double timestampSum = timestampsOfObservations.stream().mapToDouble(time -> time).sum();
-
-    return weightedSum / timestampSum;
+    mean = weightedSum / timestampSum;
   }
 
   @Override
   public void clear() {
     super.clear();
-
-    timestampsOfObservations.clear();
   }
 }

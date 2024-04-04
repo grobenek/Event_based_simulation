@@ -5,6 +5,7 @@ import szathmary.peter.simulation.ElectroShopSimulation;
 import szathmary.peter.simulation.SimulationCore;
 import szathmary.peter.simulation.entity.cashregister.CashRegister;
 import szathmary.peter.simulation.entity.customer.Customer;
+import szathmary.peter.util.TimeFormatter;
 
 /** Created by petos on 31/03/2024. */
 public class RemoveCustomerFromCashRegisterQueue extends Event {
@@ -25,11 +26,13 @@ public class RemoveCustomerFromCashRegisterQueue extends Event {
     cashRegisterOwningQueue.setServing(true);
     cashRegisterOwningQueue.setCurrentServedCustomer(removedCustomerFromQueue);
 
-    electroShopSimulation.addEvent(new StartCashRegisterServiceEvent(getTimestamp(), removedCustomerFromQueue, cashRegisterOwningQueue));
+    electroShopSimulation.addEvent(
+        new StartCashRegisterServiceEvent(
+            getTimestamp(), removedCustomerFromQueue, cashRegisterOwningQueue));
   }
 
   @Override
   public String getEventDescription() {
-    return String.format("Removing customer from cash register queue at %f!", getTimestamp());
+    return String.format("Removing customer from cash register queue at %s!", TimeFormatter.getFormattedTime(getTimestamp()));
   }
 }

@@ -8,7 +8,9 @@ import szathmary.peter.simulation.entity.ServiceStation;
 import szathmary.peter.simulation.entity.cashregister.CashRegister;
 import szathmary.peter.simulation.entity.customer.Customer;
 import szathmary.peter.simulation.entity.customer.CustomerType;
+import szathmary.peter.simulation.entity.employee.EmployeeStatus;
 import szathmary.peter.simulation.entity.order.OrderSize;
+import szathmary.peter.util.TimeFormatter;
 
 /** Created by petos on 31/03/2024. */
 public class EndOfCasualAndContractServiceEvent extends Event {
@@ -34,9 +36,10 @@ public class EndOfCasualAndContractServiceEvent extends Event {
   public void execute(SimulationCore simulationCore) {
     ElectroShopSimulation electroShopSimulation = ((ElectroShopSimulation) simulationCore);
 
-    // TODO upravit service booleans + spravit pokladne
     CashRegister cashRegisterToPutCustomerIn = electroShopSimulation.getEligebleCashRegister();
+
     servedCustomer.setTimeOfEnteringCheckoutQueue(getTimestamp());
+
     cashRegisterToPutCustomerIn.addCustomerToQueue(servedCustomer);
 
     if (servedCustomer.getOrderSize() == OrderSize.SMALL) {
@@ -44,21 +47,21 @@ public class EndOfCasualAndContractServiceEvent extends Event {
       currentServiceStation.setCurrentServedCustomer(null);
 
       // service of next customer is being planned
-    if (!electroShopSimulation.isCasualContractCustomerQueueEmpty()) {
-      electroShopSimulation.addEvent(
-          new RemoveCustomerFromCasualAndContractQueueEvent(getTimestamp()));
+      if (!electroShopSimulation.isCasualContractCustomerQueueEmpty()) {
+        electroShopSimulation.addEvent(
+            new RemoveCustomerFromCasualAndContractQueueEvent(getTimestamp()));
+      }
     }
-    }
+    currentServiceStation.getEmployee().setStatus(EmployeeStatus.IDLE);
 
     electroShopSimulation.addEvent(
         new RemoveCustomerFromCashRegisterQueue(getTimestamp(), cashRegisterToPutCustomerIn));
-
   }
 
   @Override
   public String getEventDescription() {
     return String.format(
-        "%s customer has been stopped served at casual and contract service station at %f",
-        servedCustomer.getCustomerType(), getTimestamp());
+        "%s customer has been stopped served at casual and contract service station at %s",
+        servedCustomer.getCustomerType(), TimeFormatter.getFormattedTime(getTimestamp()));
   }
 }

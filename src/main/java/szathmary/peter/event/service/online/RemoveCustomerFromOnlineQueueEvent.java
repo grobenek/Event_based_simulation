@@ -4,6 +4,7 @@ import szathmary.peter.event.Event;
 import szathmary.peter.simulation.ElectroShopSimulation;
 import szathmary.peter.simulation.SimulationCore;
 import szathmary.peter.simulation.entity.customer.Customer;
+import szathmary.peter.util.TimeFormatter;
 
 /** Created by petos on 30/03/2024. */
 public class RemoveCustomerFromOnlineQueueEvent extends Event {
@@ -31,6 +32,6 @@ public class RemoveCustomerFromOnlineQueueEvent extends Event {
   @Override
   public String getEventDescription() {
     return String.format(
-        "Removing online customer from online customer queue at %f", getTimestamp());
+        "Removing online customer from online customer queue at %s", TimeFormatter.getFormattedTime(getTimestamp()));
   }
 }

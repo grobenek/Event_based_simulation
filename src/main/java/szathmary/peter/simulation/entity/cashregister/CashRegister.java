@@ -4,6 +4,7 @@ import java.util.LinkedList;
 import java.util.Queue;
 import szathmary.peter.simulation.entity.customer.Customer;
 import szathmary.peter.simulation.entity.employee.Employee;
+import szathmary.peter.simulation.entity.employee.EmployeeType;
 
 /** Created by petos on 29/03/2024. */
 public class CashRegister {
@@ -11,10 +12,12 @@ public class CashRegister {
   private final Employee employee;
   private boolean isServing;
   private Customer currentServedCustomer;
+  private String name;
 
-  public CashRegister() {
+  public CashRegister(String name) {
+    this.name = name;
     this.cashRegisterQueue = new LinkedList<>();
-    this.employee = new Employee();
+    this.employee = new Employee(EmployeeType.CASH_REGISTER);
     this.isServing = false;
     this.currentServedCustomer = null;
   }
@@ -48,16 +51,20 @@ public class CashRegister {
     return currentServedCustomer;
   }
 
-  public int getQueueLength() {
-    return cashRegisterQueue.size();
-  }
-
   public CashRegister setCurrentServedCustomer(Customer currentServedCustomer) {
     this.currentServedCustomer = currentServedCustomer;
     return this;
   }
 
+  public int getQueueLength() {
+    return cashRegisterQueue.size();
+  }
+
   public boolean isQueueEmpty() {
     return cashRegisterQueue.isEmpty();
+  }
+
+  public String getName() {
+    return name;
   }
 }

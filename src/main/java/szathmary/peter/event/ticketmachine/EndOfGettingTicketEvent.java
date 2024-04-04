@@ -7,6 +7,7 @@ import szathmary.peter.simulation.ElectroShopSimulation;
 import szathmary.peter.simulation.SimulationCore;
 import szathmary.peter.simulation.entity.customer.Customer;
 import szathmary.peter.simulation.entity.customer.CustomerType;
+import szathmary.peter.util.TimeFormatter;
 
 /** Created by petos on 29/03/2024. */
 public class EndOfGettingTicketEvent extends Event {
@@ -64,28 +65,26 @@ public class EndOfGettingTicketEvent extends Event {
       electroShopSimulation.setTicketMachineStopped(true);
     }
 
-    // TODO MOZNO TU CHYBA
     switch (selectedCustomerType) {
       case CASUAL, CONTRACT -> {
-        if (electroShopSimulation.isAtLeastOneCausualAndContractServiceFree()
+        if (electroShopSimulation.isAtLeastOneServiceFree(false)
             && !electroShopSimulation.isCasualContractCustomerQueueEmpty()) {
           electroShopSimulation.addEvent(
               new RemoveCustomerFromCasualAndContractQueueEvent(getTimestamp()));
         }
       }
       case ONLINE -> {
-        if (electroShopSimulation.isAtLeastOneOnlineServiceFree()
+        if (electroShopSimulation.isAtLeastOneServiceFree(true)
             && !electroShopSimulation.isOnlineCustomerQueueEmpty()) {
           electroShopSimulation.addEvent(new RemoveCustomerFromOnlineQueueEvent(getTimestamp()));
         }
       }
       default ->
           throw new IllegalStateException(
-              String.format("Unknown customer type %s was selected!", selectedCustomerType));
+              String.format(
+                  "Unknown customer type %s was selected at %s!",
+                  selectedCustomerType, getClass().getName()));
     }
-
-    // TODO ak rada v service klesne pod 8, tak znovu povolit ticket machine a mozno mu aj
-    // naplanovat obsluhu znovu V SERVICE
 
     if ((!electroShopSimulation.isTicketMachineStopped())
         && (!electroShopSimulation.isTicketMachineServingCustomer())
@@ -96,6 +95,6 @@ public class EndOfGettingTicketEvent extends Event {
 
   @Override
   public String getEventDescription() {
-    return String.format("Customer stopped getting ticket at %f", getTimestamp());
+    return String.format("Customer stopped getting ticket at %s", TimeFormatter.getFormattedTime(getTimestamp()));
   }
 }

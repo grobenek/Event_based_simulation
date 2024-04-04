@@ -8,7 +8,9 @@ import szathmary.peter.simulation.SimulationCore;
 import szathmary.peter.simulation.entity.cashregister.CashRegister;
 import szathmary.peter.simulation.entity.customer.Customer;
 import szathmary.peter.simulation.entity.customer.CustomerType;
+import szathmary.peter.simulation.entity.employee.EmployeeStatus;
 import szathmary.peter.simulation.entity.order.OrderSize;
+import szathmary.peter.util.TimeFormatter;
 
 /** Created by petos on 31/03/2024. */
 public class EndOfCashRegisterServiceEvent extends Event {
@@ -27,14 +29,13 @@ public class EndOfCashRegisterServiceEvent extends Event {
   public void execute(SimulationCore simulationCore) {
     ElectroShopSimulation electroShopSimulation = ((ElectroShopSimulation) simulationCore);
 
-    // TODO nastavit boolean a nastavit cas zakaznikovi
-
     double timeForGettingBigOrder = 0.0;
     if (servedCustomer.getOrderSize() == OrderSize.BIG) {
       servedCustomer.getServiceStationThatServedCustomer().setServing(false);
       servedCustomer.getServiceStationThatServedCustomer().setCurrentServedCustomer(null);
 
-      timeForGettingBigOrder += electroShopSimulation.getTimeForTakeBigOrderRandomGenerator().sample();
+      timeForGettingBigOrder +=
+          electroShopSimulation.getTimeForTakeBigOrderRandomGenerator().sample();
 
       // service of next customer is being planned
       if (servedCustomer.getCustomerType() != CustomerType.ONLINE) {
@@ -49,23 +50,39 @@ public class EndOfCashRegisterServiceEvent extends Event {
       }
     }
 
-    // TODO naplanovat dalsiehho ak tak
-
     if (!currentCashRegister.isQueueEmpty()) {
       simulationCore.addEvent(
           new RemoveCustomerFromCashRegisterQueue(getTimestamp(), currentCashRegister));
     }
 
-    servedCustomer.setTimeOfLeavingSystem(getTimestamp() + timeForGettingBigOrder);
+    double timeOfLeavingSystem = getTimestamp() + timeForGettingBigOrder;
+    servedCustomer.setTimeOfLeavingSystem(timeOfLeavingSystem);
+    electroShopSimulation.setLastCustomerLeavingTime(timeOfLeavingSystem);
 
-    electroShopSimulation.getTimeInSystemStatisticReplications().addObservation(servedCustomer.getTimeOfLeavingSystem() - servedCustomer.getTimeOfArrival());
-    electroShopSimulation.getTimeInTicketQueueReplications().addObservation(servedCustomer.getTimeOfLeavingTicketQueue() - servedCustomer.getTimeOfEnteringTicketQueue());
+    updateStatistics(electroShopSimulation);
+
+    currentCashRegister.getEmployee().setStatus(EmployeeStatus.IDLE);
+    currentCashRegister.setServing(false);
+    currentCashRegister.setCurrentServedCustomer(null);
+  }
+
+  private void updateStatistics(ElectroShopSimulation electroShopSimulation) {
+    electroShopSimulation
+        .getTimeInSystemStatisticReplications()
+        .addObservation(
+            servedCustomer.getTimeOfLeavingSystem() - servedCustomer.getTimeOfArrival());
+
+    electroShopSimulation
+        .getTimeInTicketQueueStatisticReplications()
+        .addObservation(
+            servedCustomer.getTimeOfLeavingTicketQueue()
+                - servedCustomer.getTimeOfEnteringTicketQueue());
   }
 
   @Override
   public String getEventDescription() {
     return String.format(
-        "%s customer has payed and is leaving system at %f!",
-        servedCustomer.getCustomerType(), getTimestamp());
+        "%s customer has payed and is leaving system at %s!",
+        servedCustomer.getCustomerType(), TimeFormatter.getFormattedTime(getTimestamp()));
   }
 }

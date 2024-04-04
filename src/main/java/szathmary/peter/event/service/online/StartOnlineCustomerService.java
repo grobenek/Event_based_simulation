@@ -6,8 +6,10 @@ import szathmary.peter.simulation.SimulationCore;
 import szathmary.peter.simulation.entity.ServiceStation;
 import szathmary.peter.simulation.entity.customer.Customer;
 import szathmary.peter.simulation.entity.customer.CustomerType;
+import szathmary.peter.simulation.entity.employee.EmployeeStatus;
 import szathmary.peter.simulation.entity.order.OrderSize;
 import szathmary.peter.simulation.entity.order.OrderType;
+import szathmary.peter.util.TimeFormatter;
 
 /** Created by petos on 30/03/2024. */
 public class StartOnlineCustomerService extends Event {
@@ -31,63 +33,21 @@ public class StartOnlineCustomerService extends Event {
   public void execute(SimulationCore simulationCore) {
     ElectroShopSimulation electroShopSimulation = ((ElectroShopSimulation) simulationCore);
 
-    ServiceStation freeServiceStation = electroShopSimulation.getFreeOnlineServiceStation();
+    ServiceStation freeServiceStation = electroShopSimulation.getFreeServiceStation(true);
 
     freeServiceStation.setServing(true);
     freeServiceStation.setCurrentServedCustomer(servedCustomer);
-
-    // getting type of order
-
-    double generatedValueOfOrderType =
-        electroShopSimulation.getTypeOfOrderRandomGenerator().sample();
-    OrderType orderType = generateOrderType(generatedValueOfOrderType);
-
-    double timeOfEndOfService;
-
-    switch (orderType) {
-      case EASY ->
-          timeOfEndOfService = electroShopSimulation.getEasyOrderTimeRandomGenerator().sample();
-
-      case MEDIUM ->
-          timeOfEndOfService = electroShopSimulation.getMediumOrderTimeRandomGenerator().sample();
-
-      case HARD ->
-          timeOfEndOfService = electroShopSimulation.getHardOrderTimeRandomGenerator().sample();
-
-      default ->
-          throw new IllegalStateException(
-              String.format("Unknown %s order type selected!", orderType));
-    }
+    freeServiceStation.getEmployee().setStatus(EmployeeStatus.SERVING);
 
     OrderSize orderSize =
         generateOrderSize(electroShopSimulation.getOrderSizeRandomGenerator().sample());
 
     servedCustomer.setOrderSize(orderSize);
     servedCustomer.setServiceStationThatServedCustomer(freeServiceStation);
+    servedCustomer.setTimeOfStartOfService(getTimestamp());
 
     electroShopSimulation.addEvent(
-        new EndOfOnlineServiceEvent(
-            getTimestamp() + timeOfEndOfService, servedCustomer, freeServiceStation));
-  }
-
-  private OrderType generateOrderType(double sample) {
-    double cummulatedProbability = 0.0;
-    OrderType selectedOrderType = null;
-    for (int i = 0; i < OrderType.values().length; i++) {
-      OrderType orderType = OrderType.values()[i];
-
-      cummulatedProbability += orderType.getProbability();
-
-      if (sample <= cummulatedProbability) {
-        selectedOrderType = orderType;
-        break;
-      }
-    }
-
-    if (selectedOrderType == null) {
-      throw new IllegalStateException("No order type was selected!");
-    }
-    return selectedOrderType;
+        new EndOfOnlineServiceEvent(getTimestamp(), servedCustomer, freeServiceStation));
   }
 
   private OrderSize generateOrderSize(double sample) {
@@ -112,6 +72,8 @@ public class StartOnlineCustomerService extends Event {
 
   @Override
   public String getEventDescription() {
-    return String.format("Starting online service of customer at %f!", getTimestamp());
+    return String.format(
+        "Starting online service of customer at %s!",
+        TimeFormatter.getFormattedTime(getTimestamp()));
   }
 }

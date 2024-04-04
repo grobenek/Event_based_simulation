@@ -5,6 +5,8 @@ import szathmary.peter.simulation.ElectroShopSimulation;
 import szathmary.peter.simulation.SimulationCore;
 import szathmary.peter.simulation.entity.cashregister.CashRegister;
 import szathmary.peter.simulation.entity.customer.Customer;
+import szathmary.peter.simulation.entity.employee.EmployeeStatus;
+import szathmary.peter.util.TimeFormatter;
 
 /** Created by petos on 31/03/2024. */
 public class StartCashRegisterServiceEvent extends Event {
@@ -23,6 +25,12 @@ public class StartCashRegisterServiceEvent extends Event {
   public void execute(SimulationCore simulationCore) {
     ElectroShopSimulation electroShopSimulation = ((ElectroShopSimulation) simulationCore);
 
+    servedCustomer.setTimeOfStartCheckoutService(getTimestamp());
+
+    currentCashRegister.getEmployee().setStatus(EmployeeStatus.SERVING);
+    currentCashRegister.setServing(true);
+    currentCashRegister.setCurrentServedCustomer(servedCustomer);
+
     double timeOfEndOfService =
         getTimestamp() + electroShopSimulation.getPaymentTimeRandomGenerator().sample();
 
@@ -32,6 +40,8 @@ public class StartCashRegisterServiceEvent extends Event {
 
   @Override
   public String getEventDescription() {
-    return String.format("%s customer is start paying at cash register at %f", servedCustomer.getCustomerType(), getTimestamp());
+    return String.format(
+        "%s customer is start paying at cash register at %s",
+        servedCustomer.getCustomerType(), TimeFormatter.getFormattedTime(getTimestamp()));
   }
 }

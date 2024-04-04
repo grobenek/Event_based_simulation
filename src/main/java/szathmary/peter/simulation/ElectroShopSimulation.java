@@ -3,6 +3,9 @@ package szathmary.peter.simulation;
 import java.util.*;
 import java.util.stream.IntStream;
 import szathmary.peter.event.InitialEvent;
+import szathmary.peter.mvc.model.SimulationOverview;
+import szathmary.peter.mvc.observable.IObserver;
+import szathmary.peter.mvc.observable.IReplicationObservable;
 import szathmary.peter.randomgenerators.continuousgenerators.ContinuousEmpiricRandomGenerator;
 import szathmary.peter.randomgenerators.continuousgenerators.ContinuousExponentialRandomGenerator;
 import szathmary.peter.randomgenerators.continuousgenerators.ContinuousTriangularRandomGenerator;
@@ -13,6 +16,8 @@ import szathmary.peter.simulation.entity.ServiceStation;
 import szathmary.peter.simulation.entity.cashregister.CashRegister;
 import szathmary.peter.simulation.entity.customer.Customer;
 import szathmary.peter.simulation.entity.customer.CustomerType;
+import szathmary.peter.simulation.entity.employee.Employee;
+import szathmary.peter.statistic.ContinuousStatistic;
 import szathmary.peter.statistic.DiscreteStatistic;
 import szathmary.peter.statistic.Statistic;
 
@@ -20,16 +25,16 @@ import szathmary.peter.statistic.Statistic;
  * Created by petos on 23/03/2024.<br>
  * Simulation time is in <b>SECONDS</b>
  */
-public class ElectroShopSimulation extends SimulationCore {
+public class ElectroShopSimulation extends SimulationCore implements IReplicationObservable {
   public static final double CLOSING_HOURS_OF_TICKET_MACHINE = 8 * 60 * 60;
-  public static final int SERVICE_STATION_QUEUE_CAPACITY = 8;
+  public static final int SERVICE_STATION_QUEUE_CAPACITY = 9;
   public static final double
       RATIO_OF_CASUAL_AND_CONTRACT_SERVICE_STATION_VS_ONLINE_SERVICE_STATIONS = 2.0 / 3.0;
-  private List<Customer> allCustomerList;
+  private final List<IObserver> observers;
   private final int numberOfServiceStations;
   private final int numberOfCashRegisters;
   private final ContinuousExponentialRandomGenerator timeBetweenCustomerArrivalsRandomGenerator =
-      new ContinuousExponentialRandomGenerator(1.0 / (30.0 / 60.0 / 60.0));
+      new ContinuousExponentialRandomGenerator(1.0 / 120.0);
   private final ContinuousUniformGenerator customerTypeGenerator =
       new ContinuousUniformGenerator(0, 1);
   private final ContinuousUniformGenerator ticketPrintingTimeRandomGenerator =
@@ -62,15 +67,19 @@ public class ElectroShopSimulation extends SimulationCore {
               new EmpiricOption<>(11.0 * 60, 12.0 * 60, 0.1),
               new EmpiricOption<>(12.0 * 60, 20.0 * 60, 0.6),
               new EmpiricOption<>(20.0 * 60, 25.0 * 60, 0.3)));
-
   private final ContinuousUniformGenerator emptyCashRegistersChoosingRandomGenerator =
       new ContinuousUniformGenerator(0, 1);
   private final ContinuousUniformGenerator equalQueueCashRegistersChoosingRandomgenerator =
       new ContinuousUniformGenerator(0, 1);
   private final Statistic timeInSystemStatisticReplications;
   private final Statistic timeInSystemStatisticSummary;
-  private final Statistic timeInTicketQueueSummary;
-  private final Statistic timeInTicketQueueReplications;
+  private final Statistic timeInTicketQueueStatisticSummary;
+  private final Statistic timeInTicketQueueStatisticReplications;
+  private final Statistic ticketQueueLengthStatisticSummary;
+  private final Statistic ticketQueueLengthStatisticReplication;
+  private final Statistic lastCustomerTimeLeftStatisticSummary;
+  private double lastCustomerLeavingTime;
+  private List<Customer> allCustomerList;
   private Queue<Customer> ticketMachineQueue;
   private List<ServiceStation> serviceStations;
   private List<CashRegister> cashRegisters;
@@ -78,6 +87,7 @@ public class ElectroShopSimulation extends SimulationCore {
   private Queue<Customer> onlineCustomersQueue;
   private boolean isTicketMachineServingCustomer;
   private boolean isTicketMachineStopped;
+  private List<Employee> allEmployeesList;
 
   public ElectroShopSimulation(
       long numberOfReplications,
@@ -86,20 +96,33 @@ public class ElectroShopSimulation extends SimulationCore {
       boolean verboseSimulation) {
     super(numberOfReplications, verboseSimulation);
 
+    this.observers = new ArrayList<>();
+
     this.numberOfCashRegisters = numberOfCashRegisters;
     this.numberOfServiceStations = numberOfServiceStations;
 
     initializeVariables();
 
-    this.timeInSystemStatisticReplications = new DiscreteStatistic();
-    this.timeInSystemStatisticSummary = new DiscreteStatistic();
+    this.timeInSystemStatisticReplications = new DiscreteStatistic("Time in system - replication");
+    this.timeInSystemStatisticSummary = new DiscreteStatistic("Time in system - summary");
 
-    this.timeInTicketQueueReplications = new DiscreteStatistic();
-    this.timeInTicketQueueSummary = new DiscreteStatistic();
+    this.timeInTicketQueueStatisticReplications =
+        new DiscreteStatistic("Time in ticket queue - replication");
+    this.timeInTicketQueueStatisticSummary =
+        new DiscreteStatistic("Time in ticket queue - summary");
+
+    this.ticketQueueLengthStatisticReplication =
+        new ContinuousStatistic("Ticket queue length - replication");
+    this.ticketQueueLengthStatisticSummary = new DiscreteStatistic("Ticket queue length - summary");
+
+    this.lastCustomerTimeLeftStatisticSummary = new DiscreteStatistic("Leaving time - summary");
   }
 
   private void initializeVariables() {
     this.allCustomerList = new ArrayList<>();
+    this.allEmployeesList = new ArrayList<>();
+
+    this.lastCustomerLeavingTime = Double.NaN;
 
     this.isTicketMachineServingCustomer = false;
     this.isTicketMachineStopped = false;
@@ -116,7 +139,9 @@ public class ElectroShopSimulation extends SimulationCore {
 
     // adding cash registers
     for (int i = 0; i < numberOfCashRegisters; i++) {
-      cashRegisters.add(new CashRegister());
+      CashRegister cashRegister = new CashRegister(Integer.toString(i + 1));
+      cashRegisters.add(cashRegister);
+      addEmployee(cashRegister.getEmployee());
     }
   }
 
@@ -128,35 +153,57 @@ public class ElectroShopSimulation extends SimulationCore {
                     * numberOfServiceStations);
 
     for (int i = 0; i < numberOfServiceStations; i++) {
-      serviceStations.add(new ServiceStation(i < numberOfCasualAndContractServiceStations));
+      ServiceStation serviceStation =
+          new ServiceStation(i < numberOfCasualAndContractServiceStations);
+      serviceStations.add(serviceStation);
+      addEmployee(serviceStation.getEmployee());
     }
   }
 
   @Override
   public void afterReplications() {
     System.out.println(timeInSystemStatisticSummary);
-    System.out.println(timeInTicketQueueSummary);
+    System.out.println(timeInTicketQueueStatisticSummary);
+    System.out.println(ticketQueueLengthStatisticSummary);
+    System.out.println(lastCustomerTimeLeftStatisticSummary);
   }
 
   @Override
   public void afterReplication() {
     timeInSystemStatisticSummary.addObservation(timeInSystemStatisticReplications.getMean());
-    timeInTicketQueueSummary.addObservation(timeInTicketQueueReplications.getMean());
+    timeInTicketQueueStatisticSummary.addObservation(
+        timeInTicketQueueStatisticReplications.getMean());
+    ticketQueueLengthStatisticSummary.addObservation(
+        ticketQueueLengthStatisticReplication.getMean());
+    lastCustomerTimeLeftStatisticSummary.addObservation(lastCustomerLeavingTime);
+
+    sendNotifications();
   }
 
   @Override
   public void replication() {
     while (!isEventCalendarEmpty()) {
+      if (getIsStopped()) {
+        continue;
+      }
       simulateEvent();
+      if (isVerbose()) {
+        sendNotifications();
+      }
     }
   }
 
   @Override
   public void beforeReplication() {
+    allEmployeesList.clear();
+    allCustomerList.clear();
+    resetCurrentTime();
+
     initializeVariables();
 
     timeInSystemStatisticReplications.clear();
-    timeInTicketQueueReplications.clear();
+    timeInTicketQueueStatisticReplications.clear();
+    ticketQueueLengthStatisticReplication.clear();
     addStartingEvent();
   }
 
@@ -171,46 +218,25 @@ public class ElectroShopSimulation extends SimulationCore {
     return onlineCustomersQueue.size() + casualAndContractCustomerQueue.size() == 8;
   }
 
-  public boolean isAtLeastOneOnlineServiceFree() {
+  public boolean isAtLeastOneServiceFree(boolean isOnlineService) {
     Optional<ServiceStation> freeServingStation =
         serviceStations.stream()
-            .filter(station -> station.isServingOnlineCustomers() && (!station.isServing()))
+            .filter(
+                station ->
+                    (station.isServingOnlineCustomers() == isOnlineService)
+                        && (!station.isServing()))
             .findFirst();
 
     return freeServingStation.isPresent();
   }
 
-  public boolean isAtLeastOneCausualAndContractServiceFree() {
+  public ServiceStation getFreeServiceStation(boolean isOnlineServiceStation) {
     Optional<ServiceStation> freeServingStation =
-        serviceStations
-            .stream() // TODO toto potom refactornut na boolean parameter ktory zistuje ci ma byt
-            // online ci nie
-            .filter(station -> (!station.isServingOnlineCustomers()) && (!station.isServing()))
-            .findFirst();
-
-    return freeServingStation.isPresent();
-  }
-
-  public ServiceStation getFreeCasualAndContractServiceStation() {
-    Optional<ServiceStation> freeServingStation =
-        serviceStations
-            .stream() // TODO toto potom refactornut na boolean parameter ktory zistuje ci ma byt
-            // online ci nie
-            .filter(station -> (!station.isServingOnlineCustomers()) && (!station.isServing()))
-            .findFirst();
-
-    return freeServingStation.orElseThrow(
-        () ->
-            new IllegalStateException(
-                "Cannot get free casual and contract station, because non is free!"));
-  }
-
-  public ServiceStation getFreeOnlineServiceStation() {
-    Optional<ServiceStation> freeServingStation =
-        serviceStations
-            .stream() // TODO toto potom refactornut na boolean parameter ktory zistuje ci ma byt
-            // online ci nie
-            .filter(station -> (station.isServingOnlineCustomers()) && (!station.isServing()))
+        serviceStations.stream()
+            .filter(
+                station ->
+                    (station.isServingOnlineCustomers() == isOnlineServiceStation)
+                        && (!station.isServing()))
             .findFirst();
 
     return freeServingStation.orElseThrow(
@@ -244,6 +270,9 @@ public class ElectroShopSimulation extends SimulationCore {
     customer.setTimeOfEnteringTicketQueue(getCurrentTime());
     allCustomerList.add(customer);
 
+    ticketQueueLengthStatisticReplication.addObservation(
+        ticketMachineQueue.size(), getCurrentTime());
+
     ticketMachineQueue.add(customer);
   }
 
@@ -254,6 +283,10 @@ public class ElectroShopSimulation extends SimulationCore {
     }
 
     Customer removedCustomer = ticketMachineQueue.poll();
+
+    ticketQueueLengthStatisticReplication.addObservation(
+        ticketMachineQueue.size(), getCurrentTime());
+
     removedCustomer.setTimeOfLeavingTicketQueue(getCurrentTime());
     return removedCustomer;
   }
@@ -277,6 +310,8 @@ public class ElectroShopSimulation extends SimulationCore {
               "Cannot add another customer to queue for casual and contract customers, current capacity is %d",
               casualAndContractCustomerQueue.size()));
     }
+
+    customer.setTimeOfEnteringServiceQueue(getCurrentTime());
 
     casualAndContractCustomerQueue.add(customer);
   }
@@ -315,36 +350,6 @@ public class ElectroShopSimulation extends SimulationCore {
     }
 
     return onlineCustomersQueue.poll();
-  }
-
-  public ServiceStation getServiceStation(int index) {
-    if (index < 0 || index > serviceStations.size()) {
-      throw new IllegalArgumentException(
-          String.format(
-              "Cannot get service station at index %d, there are only %d service stations!",
-              index, serviceStations.size()));
-    }
-
-    return serviceStations.get(index);
-  }
-
-  public CashRegister getCashRegister(int index) {
-    if (index < 0 || index > cashRegisters.size()) {
-      throw new IllegalArgumentException(
-          String.format(
-              "Cannot get cash register at index %d, there are only %d cash registers!",
-              index, cashRegisters.size()));
-    }
-
-    return cashRegisters.get(index);
-  }
-
-  public List<ServiceStation> getServiceStations() {
-    return serviceStations;
-  }
-
-  public List<CashRegister> getCashRegisters() {
-    return cashRegisters;
   }
 
   public ContinuousExponentialRandomGenerator getTimeBetweenCustomerArrivalsRandomGenerator() {
@@ -401,12 +406,13 @@ public class ElectroShopSimulation extends SimulationCore {
     return casualAndContractCustomerQueue.isEmpty();
   }
 
-  public ContinuousUniformGenerator getEmptyCashRegistersChoosingRandomGenerator() {
-    return emptyCashRegistersChoosingRandomGenerator;
+  public double getLastCustomerLeavingTime() {
+    return lastCustomerLeavingTime;
   }
 
-  public ContinuousUniformGenerator getEqualQueueCashRegistersChoosingRandomgenerator() {
-    return equalQueueCashRegistersChoosingRandomgenerator;
+  public ElectroShopSimulation setLastCustomerLeavingTime(double lastCustomerLeavingTime) {
+    this.lastCustomerLeavingTime = lastCustomerLeavingTime;
+    return this;
   }
 
   public CashRegister getEligebleCashRegister() {
@@ -468,7 +474,61 @@ public class ElectroShopSimulation extends SimulationCore {
     return timeInSystemStatisticReplications;
   }
 
-  public Statistic getTimeInTicketQueueReplications() {
-    return timeInTicketQueueReplications;
+  public Statistic getTimeInTicketQueueStatisticReplications() {
+    return timeInTicketQueueStatisticReplications;
+  }
+
+  public Statistic getTicketQueueLengthStatisticSummary() {
+    return ticketQueueLengthStatisticSummary;
+  }
+
+  public Statistic getTicketQueueLengthStatisticReplication() {
+    return ticketQueueLengthStatisticReplication;
+  }
+
+  public Statistic getLastCustomerTimeLeftStatisticSummary() {
+    return lastCustomerTimeLeftStatisticSummary;
+  }
+
+  public void addEmployee(Employee employee) {
+    allEmployeesList.add(employee);
+  }
+
+  @Override
+  public SimulationOverview getSimulationOverview() {
+    return new SimulationOverview(
+        casualAndContractCustomerQueue.size() + onlineCustomersQueue.size(),
+        getCurrentReplication(),
+        getCurrentTime(),
+        allCustomerList,
+        allEmployeesList,
+        serviceStations,
+        cashRegisters,
+        List.of(
+            timeInSystemStatisticSummary,
+            timeInTicketQueueStatisticSummary,
+            ticketQueueLengthStatisticSummary,
+            lastCustomerTimeLeftStatisticSummary),
+        List.of(
+            timeInSystemStatisticReplications,
+            timeInTicketQueueStatisticReplications,
+            ticketQueueLengthStatisticReplication));
+  }
+
+  @Override
+  public void attach(IObserver observer) {
+    observers.add(observer);
+  }
+
+  @Override
+  public void detach(IObserver observer) {
+    observers.remove(observer);
+  }
+
+  @Override
+  public void sendNotifications() {
+    for (IObserver observer : observers) {
+      observer.update(this);
+    }
   }
 }

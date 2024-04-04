@@ -4,6 +4,7 @@ import szathmary.peter.event.Event;
 import szathmary.peter.simulation.ElectroShopSimulation;
 import szathmary.peter.simulation.SimulationCore;
 import szathmary.peter.simulation.entity.customer.Customer;
+import szathmary.peter.util.TimeFormatter;
 
 /** Created by petos on 29/03/2024. */
 public class StartGettingTicketEvent extends Event {
@@ -21,15 +22,17 @@ public class StartGettingTicketEvent extends Event {
 
     electroShopSimulation.setTicketMachineServingCustomer(true);
 
-    double timeOfEndOfServingCustomer = getTimestamp() + electroShopSimulation.getTicketPrintingTimeRandomGenerator().sample();
+    double timeOfEndOfServingCustomer =
+        getTimestamp() + electroShopSimulation.getTicketPrintingTimeRandomGenerator().sample();
 
-    Event endOfGettingTicketEvent = new EndOfGettingTicketEvent(timeOfEndOfServingCustomer, servedCustomer);
+    Event endOfGettingTicketEvent =
+        new EndOfGettingTicketEvent(timeOfEndOfServingCustomer, servedCustomer);
 
     electroShopSimulation.addEvent(endOfGettingTicketEvent);
   }
 
   @Override
   public String getEventDescription() {
-    return String.format("Customer is getting ticket at %f", getTimestamp());
+    return String.format("Customer is getting ticket at %s", TimeFormatter.getFormattedTime(getTimestamp()));
   }
 }

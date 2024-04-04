@@ -8,15 +8,15 @@ public final class Customer implements Comparable<Customer> {
   private ServiceStation serviceStationThatServedCustomer;
   private OrderSize orderSize;
   private CustomerType customerType;
-  private double timeOfArrival;
-  private double timeOfEnteringTicketQueue;
-  private double timeOfLeavingTicketQueue;
-  private double timeOfGettingTicket;
-  private double timeOfEnteringServiceQueue;
-  private double timeOfStartOfService;
-  private double timeOfEnteringCheckoutQueue;
-  private double timeOfStartCheckoutService;
-  private double timeOfLeavingSystem;
+  private double timeOfArrival = Double.NaN;
+  private double timeOfEnteringTicketQueue = Double.NaN;
+  private double timeOfLeavingTicketQueue = Double.NaN;
+  private double timeOfGettingTicket = Double.NaN;
+  private double timeOfEnteringServiceQueue = Double.NaN;
+  private double timeOfStartOfService = Double.NaN;
+  private double timeOfEnteringCheckoutQueue = Double.NaN;
+  private double timeOfStartCheckoutService = Double.NaN;
+  private double timeOfLeavingSystem = Double.NaN;
 
   public Customer() {}
 
@@ -114,7 +114,8 @@ public final class Customer implements Comparable<Customer> {
     return serviceStationThatServedCustomer;
   }
 
-  public Customer setServiceStationThatServedCustomer(ServiceStation serviceStationThatServedCustomer) {
+  public Customer setServiceStationThatServedCustomer(
+      ServiceStation serviceStationThatServedCustomer) {
     this.serviceStationThatServedCustomer = serviceStationThatServedCustomer;
     return this;
   }
@@ -138,13 +139,13 @@ public final class Customer implements Comparable<Customer> {
   @Override
   public int compareTo(Customer other) {
     if (this.customerType == other.getCustomerType()) {
-      return Double.compare(getTimeOfGettingTicket(), other.getTimeOfGettingTicket());
+      return Double.compare(getTimeOfGettingTicket(), other.getTimeOfGettingTicket()) * -1;
     }
 
     if (customerType == CustomerType.CONTRACT) {
-      return 1;
-    } else {
       return -1;
+    } else {
+      return 1;
     }
   }
 }

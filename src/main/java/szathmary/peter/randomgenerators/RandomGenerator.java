@@ -4,7 +4,7 @@ import java.util.Random;
 
 /** Created by petos on 27/02/2024. */
 public abstract class RandomGenerator<T extends Number> extends Generator<T> {
-  private static final Random seedGenerator = new Random();
+  private static final Random seedGenerator = new Random(1);
   protected final Random randomGenerator;
 
   public RandomGenerator(long seed) {

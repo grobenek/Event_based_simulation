@@ -5,13 +5,16 @@ import java.util.List;
 
 /** Created by petos on 19/03/2024. */
 public abstract class Statistic {
+  private final String name;
   protected final List<Double> observations;
   private double min = Double.POSITIVE_INFINITY;
   private double max = Double.NEGATIVE_INFINITY;
   private double sum = 0.0;
+  protected double mean = Double.NEGATIVE_INFINITY;
 
-  public Statistic() {
+  public Statistic(String name) {
     this.observations = new ArrayList<>();
+    this.name = name;
   }
 
   public abstract void addObservation(double observation);
@@ -36,7 +39,12 @@ public abstract class Statistic {
     sum = getSum() + observation;
   }
 
-  public abstract double getMean();
+  protected abstract void updateMean(double observation);
+  protected abstract void updateMean(double observation, double timestamp);
+
+  public double getMean() {
+    return mean;
+  };
 
   public double getMin() {
     return min;
@@ -64,17 +72,17 @@ public abstract class Statistic {
 
   @Override
   public String toString() {
-    return "Statistic{"
-        + "\n, count="
+    return "Statistic: " + name + " {"
+        + "\n, count = "
         + observations.size()
-        + "\n, min="
+        + "\n, min = "
         + min
-        + "\n, max="
+        + "\n, max = "
         + max
-        + "\n, sum="
+        + "\n, sum = "
         + sum
-        + "\n, mean= "
-        + getMean()
+        + "\n, mean = "
+        + mean
         + "\n}\n";
   }
 }

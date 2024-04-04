@@ -11,6 +11,10 @@ public class SleepEvent extends Event {
 
   @Override
   public void execute(SimulationCore simulationCore) {
+    if (!simulationCore.isVerbose()) {
+      return;
+    }
+
     try {
       Thread.sleep(simulationCore.getSleepEventDuration());
     } catch (InterruptedException e) {
@@ -21,12 +25,14 @@ public class SleepEvent extends Event {
       return;
     }
 
-    simulationCore.addEvent(
-        new SleepEvent(getTimestamp() + simulationCore.getSleepEventInterval()));
+    if (simulationCore.isVerbose()) {
+      simulationCore.addEvent(
+          new SleepEvent(getTimestamp() + simulationCore.getSleepEventInterval()));
+    }
   }
 
   @Override
   public String getEventDescription() {
-    return "Sleeping";
+    return "";
   }
 }
