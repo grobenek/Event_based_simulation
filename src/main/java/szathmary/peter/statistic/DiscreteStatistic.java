@@ -9,12 +9,12 @@ public class DiscreteStatistic extends Statistic {
 
   @Override
   public void addObservation(double observation) {
-    updateSum(observation);
+    updateCount();
+    updateSums(observation);
     updateMax(observation);
     updateMin(observation);
+    updatesampleStandardDeviation();
     updateMean(observation);
-
-    observations.add(observation);
   }
 
   @Override

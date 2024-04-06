@@ -14,7 +14,7 @@ public interface IController extends IReplicationObservable, IObserver {
 
   void stopSimulation();
 
-  void setVerboseSimulation(boolean verbose);
+  void setInspectReplication(boolean verbose);
 
     void changeSimulationSpeed(int value);
 }

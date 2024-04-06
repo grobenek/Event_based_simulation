@@ -38,7 +38,7 @@ public class ElectroShopSimulation extends SimulationCore implements IReplicatio
   private final ContinuousUniformGenerator customerTypeGenerator =
       new ContinuousUniformGenerator(0, 1);
   private final ContinuousUniformGenerator ticketPrintingTimeRandomGenerator =
-      new ContinuousUniformGenerator(30, 180);
+      new ContinuousUniformGenerator(30, 120);
   private final ContinuousUniformGenerator
       timeToFinishOrderForCasualAndContractCustomersRandomGenerator =
           new ContinuousUniformGenerator(60, 900);
@@ -270,8 +270,10 @@ public class ElectroShopSimulation extends SimulationCore implements IReplicatio
     customer.setTimeOfEnteringTicketQueue(getCurrentTime());
     allCustomerList.add(customer);
 
-    ticketQueueLengthStatisticReplication.addObservation(
-        ticketMachineQueue.size(), getCurrentTime());
+    if (getCurrentTime() < CLOSING_HOURS_OF_TICKET_MACHINE) {
+      ticketQueueLengthStatisticReplication.addObservation(
+          ticketMachineQueue.size(), getCurrentTime());
+    }
 
     ticketMachineQueue.add(customer);
   }
@@ -284,8 +286,10 @@ public class ElectroShopSimulation extends SimulationCore implements IReplicatio
 
     Customer removedCustomer = ticketMachineQueue.poll();
 
-    ticketQueueLengthStatisticReplication.addObservation(
-        ticketMachineQueue.size(), getCurrentTime());
+    if (getCurrentTime() < CLOSING_HOURS_OF_TICKET_MACHINE) {
+      ticketQueueLengthStatisticReplication.addObservation(
+          ticketMachineQueue.size(), getCurrentTime());
+    }
 
     removedCustomer.setTimeOfLeavingTicketQueue(getCurrentTime());
     return removedCustomer;
@@ -504,15 +508,13 @@ public class ElectroShopSimulation extends SimulationCore implements IReplicatio
         allEmployeesList,
         serviceStations,
         cashRegisters,
-        List.of(
-            timeInSystemStatisticSummary,
-            timeInTicketQueueStatisticSummary,
-            ticketQueueLengthStatisticSummary,
-            lastCustomerTimeLeftStatisticSummary),
-        List.of(
-            timeInSystemStatisticReplications,
-            timeInTicketQueueStatisticReplications,
-            ticketQueueLengthStatisticReplication));
+        timeInSystemStatisticReplications,
+        timeInSystemStatisticSummary,
+        timeInTicketQueueStatisticSummary,
+        timeInTicketQueueStatisticReplications,
+        ticketQueueLengthStatisticSummary,
+        ticketQueueLengthStatisticReplication,
+        lastCustomerTimeLeftStatisticSummary);
   }
 
   @Override

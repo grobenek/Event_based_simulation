@@ -1,7 +1,6 @@
 package szathmary.peter.statistic;
 
-import java.util.ArrayList;
-import java.util.List;
+import szathmary.peter.simulation.ElectroShopSimulation;
 
 /** Created by petos on 20/03/2024. */
 public class ContinuousStatistic extends Statistic {
@@ -21,13 +20,17 @@ public class ContinuousStatistic extends Statistic {
   }
 
   @Override
-  public void addObservation(double observation, double time) {
-    updateSum(observation);
+  public void addObservation(double observation, double timestamp) {
+    if (timestamp >= ElectroShopSimulation.CLOSING_HOURS_OF_TICKET_MACHINE) {
+      return;
+    }
+
+    updateCount();
+    updateSums(observation);
     updateMin(observation);
     updateMax(observation);
-    updateMean(observation, time);
-
-    observations.add(observation);
+    updatesampleStandardDeviation();
+    updateMean(observation, timestamp);
   }
 
   @Override

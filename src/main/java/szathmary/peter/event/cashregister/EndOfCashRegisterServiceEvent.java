@@ -72,11 +72,13 @@ public class EndOfCashRegisterServiceEvent extends Event {
         .addObservation(
             servedCustomer.getTimeOfLeavingSystem() - servedCustomer.getTimeOfArrival());
 
-    electroShopSimulation
-        .getTimeInTicketQueueStatisticReplications()
-        .addObservation(
-            servedCustomer.getTimeOfLeavingTicketQueue()
-                - servedCustomer.getTimeOfEnteringTicketQueue());
+    if (servedCustomer.getTimeOfLeavingTicketQueue() < ElectroShopSimulation.CLOSING_HOURS_OF_TICKET_MACHINE) {
+      electroShopSimulation
+          .getTimeInTicketQueueStatisticReplications()
+          .addObservation(
+              servedCustomer.getTimeOfLeavingTicketQueue()
+                  - servedCustomer.getTimeOfEnteringTicketQueue());
+    }
   }
 
   @Override

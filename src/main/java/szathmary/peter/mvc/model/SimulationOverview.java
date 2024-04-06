@@ -16,5 +16,10 @@ public record SimulationOverview(
     List<Employee> employeeList,
     List<ServiceStation> serviceStations,
     List<CashRegister> cashRegisters,
-    List<Statistic> summaryStatitics,
-    List<Statistic> replicationsStatistics) {}
+    Statistic timeInSystemStatisticReplications,
+    Statistic timeInSystemStatisticSummary,
+    Statistic timeInTicketQueueStatisticSummary,
+    Statistic timeInTicketQueueStatisticReplications,
+    Statistic ticketQueueLengthStatisticSummary,
+    Statistic ticketQueueLengthStatisticReplication,
+    Statistic lastCustomerTimeLeftStatisticSummary) {}

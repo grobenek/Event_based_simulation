@@ -11,12 +11,12 @@ import szathmary.peter.util.TimeFormatter;
 
 public class Main {
   public static void main(String[] args) {
-//    ElectroShopSimulation electroShopSimulation = new ElectroShopSimulation(100_000, 15, 6, false);
-//    electroShopSimulation.startSimulation();
+    ElectroShopSimulation electroShopSimulation = new ElectroShopSimulation(100_000, 13, 4, false);
+    electroShopSimulation.startSimulation();
 
-        IModel model = new SimulationModel();
-        IController controller = new SimulationController(model);
-        IMainWindow mainWindow = new MainWindow(controller);
+//        IModel model = new SimulationModel();
+//        IController controller = new SimulationController(model);
+//        IMainWindow mainWindow = new MainWindow(controller);
 
     // generator testing
 

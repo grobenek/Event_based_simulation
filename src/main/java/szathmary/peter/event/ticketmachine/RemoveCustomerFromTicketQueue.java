@@ -23,7 +23,7 @@ public class RemoveCustomerFromTicketQueue extends Event {
               getTimestamp()));
     }
 
-    if (getTimestamp() > ElectroShopSimulation.CLOSING_HOURS_OF_TICKET_MACHINE) {
+    if (getTimestamp() >= ElectroShopSimulation.CLOSING_HOURS_OF_TICKET_MACHINE) {
       removeCustomersAfterClosingHours(electroShopSimulation);
       return;
     }

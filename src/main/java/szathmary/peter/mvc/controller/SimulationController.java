@@ -47,7 +47,7 @@ public class SimulationController implements IController {
   }
 
   @Override
-  public void setVerboseSimulation(boolean verbose) {
+  public void setInspectReplication(boolean verbose) {
     model.setVerboseSimulation(verbose);
   }
 
