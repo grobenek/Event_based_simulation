@@ -1,8 +1,10 @@
 package szathmary.peter.event.service.casualandcontract;
 
 import szathmary.peter.event.Event;
+import szathmary.peter.event.ticketmachine.RemoveCustomerFromTicketQueue;
 import szathmary.peter.simulation.ElectroShopSimulation;
 import szathmary.peter.simulation.SimulationCore;
+import szathmary.peter.simulation.entity.ServiceStation;
 import szathmary.peter.simulation.entity.customer.Customer;
 import szathmary.peter.util.TimeFormatter;
 
@@ -24,10 +26,12 @@ public class RemoveCustomerFromCasualAndContractQueueEvent extends Event {
     Customer customerToServe =
         electroShopSimulation.removeCustomerFromCasualAndContractCustomerQueue();
 
-    electroShopSimulation.setTicketMachineStopped(false);
+    electroShopSimulation.setTicketMachineStopped(electroShopSimulation.isServiceQueueFull());
+
+    ServiceStation freeServiceStation = electroShopSimulation.getFreeServiceStation(false);
 
     electroShopSimulation.addEvent(
-        new StartOfCasualAndContractCustomerServiceEvent(getTimestamp(), customerToServe));
+        new StartOfCasualAndContractCustomerServiceEvent(getTimestamp(), customerToServe, freeServiceStation));
   }
 
   @Override

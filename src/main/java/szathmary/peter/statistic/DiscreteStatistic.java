@@ -3,8 +3,8 @@ package szathmary.peter.statistic;
 /** Created by petos on 20/03/2024. */
 public class DiscreteStatistic extends Statistic {
 
-  public DiscreteStatistic(String name) {
-    super(name);
+  public DiscreteStatistic(String name, boolean formatAsTime) {
+    super(name, formatAsTime);
   }
 
   @Override
@@ -30,6 +30,12 @@ public class DiscreteStatistic extends Statistic {
 
   @Override
   protected void updateMean(double observation, double timestamp) {
-    throw new UnsupportedOperationException("Cannot update observation with time in DiscreteStatistic!");
+    throw new UnsupportedOperationException(
+        "Cannot update observation with time in DiscreteStatistic!");
+  }
+
+  @Override
+  public double getMean() {
+    return mean;
   }
 }

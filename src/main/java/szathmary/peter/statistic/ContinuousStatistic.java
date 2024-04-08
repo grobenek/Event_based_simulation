@@ -1,16 +1,18 @@
 package szathmary.peter.statistic;
 
-import szathmary.peter.simulation.ElectroShopSimulation;
+import java.util.ArrayList;
+import java.util.List;
 
 /** Created by petos on 20/03/2024. */
 public class ContinuousStatistic extends Statistic {
-  private double weightedSum;
-  private double timestampSum;
+  private final List<Double> observations;
+  private final List<Double> timestamps;
 
-  public ContinuousStatistic(String name) {
-    super(name);
-    this.weightedSum = 0;
-    this.timestampSum = 0;
+  public ContinuousStatistic(String name, boolean formatAsTime) {
+    super(name, formatAsTime);
+
+    this.observations = new ArrayList<>();
+    this.timestamps = new ArrayList<>();
   }
 
   @Override
@@ -21,9 +23,8 @@ public class ContinuousStatistic extends Statistic {
 
   @Override
   public void addObservation(double observation, double timestamp) {
-    if (timestamp >= ElectroShopSimulation.CLOSING_HOURS_OF_TICKET_MACHINE) {
-      return;
-    }
+    observations.add(observation);
+    timestamps.add(timestamp);
 
     updateCount();
     updateSums(observation);
@@ -39,15 +40,32 @@ public class ContinuousStatistic extends Statistic {
         "Cannot update mean without time in ContinuousStatistic!");
   }
 
-  protected void updateMean(double observation, double timestamp) {
-    weightedSum += observation * timestamp;
-    timestampSum += timestamp;
+  protected void updateMean(double observation, double timestamp) {}
 
-    mean = weightedSum / timestampSum;
+  @Override
+  public double getMean() {
+    if (timestamps.size() == 1 || timestamps.isEmpty()) {
+      return 0.0;
+    }
+
+    double sum = 0.0;
+
+    for (int i = 0; i < timestamps.size() - 1; i++) {
+      double current = timestamps.get(i);
+      double next = timestamps.get(i + 1);
+
+      sum += (next - current) * observations.get(i);
+    }
+
+    mean = sum / timestamps.getLast();
+    return mean;
   }
 
   @Override
   public void clear() {
     super.clear();
+
+    observations.clear();
+    timestamps.clear();
   }
 }

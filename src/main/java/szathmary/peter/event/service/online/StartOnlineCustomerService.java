@@ -8,15 +8,21 @@ import szathmary.peter.simulation.entity.customer.Customer;
 import szathmary.peter.simulation.entity.customer.CustomerType;
 import szathmary.peter.simulation.entity.employee.EmployeeStatus;
 import szathmary.peter.simulation.entity.order.OrderSize;
-import szathmary.peter.simulation.entity.order.OrderType;
 import szathmary.peter.util.TimeFormatter;
 
 /** Created by petos on 30/03/2024. */
 public class StartOnlineCustomerService extends Event {
   private final Customer servedCustomer;
+  private final ServiceStation serviceStation;
 
-  public StartOnlineCustomerService(Double timestamp, Customer customerToServe) {
+  public StartOnlineCustomerService(Double timestamp, Customer customerToServe, ServiceStation serviceStation) {
     super(timestamp);
+
+    if (serviceStation.isServing()) {
+      throw new IllegalStateException(String.format("Cannot start service in online service station, because it is already serving at %f!", getTimestamp()));
+    }
+
+    this.serviceStation = serviceStation;
 
     CustomerType customerType = customerToServe.getCustomerType();
     if (customerType != CustomerType.ONLINE) {
@@ -33,21 +39,27 @@ public class StartOnlineCustomerService extends Event {
   public void execute(SimulationCore simulationCore) {
     ElectroShopSimulation electroShopSimulation = ((ElectroShopSimulation) simulationCore);
 
-    ServiceStation freeServiceStation = electroShopSimulation.getFreeServiceStation(true);
+//    ServiceStation freeServiceStation = electroShopSimulation.getFreeServiceStation(true);
 
-    freeServiceStation.setServing(true);
-    freeServiceStation.setCurrentServedCustomer(servedCustomer);
-    freeServiceStation.getEmployee().setStatus(EmployeeStatus.SERVING);
+    serviceStation.setServing(true, getTimestamp());
+    serviceStation.setCurrentServedCustomer(servedCustomer);
+    serviceStation.getEmployee().setStatus(EmployeeStatus.SERVING);
 
     OrderSize orderSize =
         generateOrderSize(electroShopSimulation.getOrderSizeRandomGenerator().sample());
 
     servedCustomer.setOrderSize(orderSize);
-    servedCustomer.setServiceStationThatServedCustomer(freeServiceStation);
+    servedCustomer.setServiceStationThatServedCustomer(serviceStation);
     servedCustomer.setTimeOfStartOfService(getTimestamp());
 
+    double endOfOnlineServiceTime =
+        getTimestamp()
+            + electroShopSimulation
+                .getTimeForFinishOrderForOnlineCustomerRandomGenerator()
+                .sample();
+
     electroShopSimulation.addEvent(
-        new EndOfOnlineServiceEvent(getTimestamp(), servedCustomer, freeServiceStation));
+        new EndOfOnlineServiceEvent(endOfOnlineServiceTime, servedCustomer, serviceStation));
   }
 
   private OrderSize generateOrderSize(double sample) {

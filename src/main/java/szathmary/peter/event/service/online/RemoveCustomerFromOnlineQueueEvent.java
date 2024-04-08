@@ -3,6 +3,7 @@ package szathmary.peter.event.service.online;
 import szathmary.peter.event.Event;
 import szathmary.peter.simulation.ElectroShopSimulation;
 import szathmary.peter.simulation.SimulationCore;
+import szathmary.peter.simulation.entity.ServiceStation;
 import szathmary.peter.simulation.entity.customer.Customer;
 import szathmary.peter.util.TimeFormatter;
 
@@ -24,14 +25,17 @@ public class RemoveCustomerFromOnlineQueueEvent extends Event {
     Customer customerToServe = electroShopSimulation.removeCustomerFromOnlineCustomerQueue();
     customerToServe.setTimeOfEnteringServiceQueue(getTimestamp());
 
-    electroShopSimulation.setTicketMachineStopped(false);
+    electroShopSimulation.setTicketMachineStopped(electroShopSimulation.isServiceQueueFull());
 
-    electroShopSimulation.addEvent(new StartOnlineCustomerService(getTimestamp(), customerToServe));
+    ServiceStation freeServiceStation = electroShopSimulation.getFreeServiceStation(true);
+
+    electroShopSimulation.addEvent(new StartOnlineCustomerService(getTimestamp(), customerToServe, freeServiceStation));
   }
 
   @Override
   public String getEventDescription() {
     return String.format(
-        "Removing online customer from online customer queue at %s", TimeFormatter.getFormattedTime(getTimestamp()));
+        "Removing online customer from online customer queue at %s",
+        TimeFormatter.getFormattedTime(getTimestamp()));
   }
 }

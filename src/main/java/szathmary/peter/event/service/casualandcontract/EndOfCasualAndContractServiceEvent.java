@@ -41,9 +41,15 @@ public class EndOfCasualAndContractServiceEvent extends Event {
     servedCustomer.setTimeOfEnteringCheckoutQueue(getTimestamp());
 
     cashRegisterToPutCustomerIn.addCustomerToQueue(servedCustomer);
+    currentServiceStation.getEmployee().setStatus(EmployeeStatus.IDLE);
+
+    if (!cashRegisterToPutCustomerIn.isServing()) {
+      electroShopSimulation.addEvent(
+          new RemoveCustomerFromCashRegisterQueue(getTimestamp(), cashRegisterToPutCustomerIn));
+    }
 
     if (servedCustomer.getOrderSize() == OrderSize.SMALL) {
-      currentServiceStation.setServing(false);
+      currentServiceStation.setServing(false, getTimestamp());
       currentServiceStation.setCurrentServedCustomer(null);
 
       // service of next customer is being planned
@@ -52,10 +58,6 @@ public class EndOfCasualAndContractServiceEvent extends Event {
             new RemoveCustomerFromCasualAndContractQueueEvent(getTimestamp()));
       }
     }
-    currentServiceStation.getEmployee().setStatus(EmployeeStatus.IDLE);
-
-    electroShopSimulation.addEvent(
-        new RemoveCustomerFromCashRegisterQueue(getTimestamp(), cashRegisterToPutCustomerIn));
   }
 
   @Override

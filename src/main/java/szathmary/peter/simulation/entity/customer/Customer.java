@@ -132,20 +132,17 @@ public final class Customer implements Comparable<Customer> {
   /**
    * If customer types are equal, customers are compared by their ticker time, else Contract
    * customer is always bigger than other types
-   *
-   * @param other the object to be compared.
-   * @return 1 if current is bigger, 0 if same and -1 if current is lower
    */
   @Override
   public int compareTo(Customer other) {
     if (this.customerType == other.getCustomerType()) {
-      return Double.compare(getTimeOfGettingTicket(), other.getTimeOfGettingTicket()) * -1;
+      return Double.compare(getTimeOfGettingTicket(), other.getTimeOfGettingTicket());
     }
 
     if (customerType == CustomerType.CONTRACT) {
       return -1;
     } else {
-      return 1;
+      return 1; //TODO pozriet ci dobra hodnota
     }
   }
 }

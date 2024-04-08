@@ -17,6 +17,7 @@ import szathmary.peter.simulation.entity.cashregister.CashRegister;
 import szathmary.peter.simulation.entity.customer.Customer;
 import szathmary.peter.simulation.entity.customer.CustomerType;
 import szathmary.peter.simulation.entity.employee.Employee;
+import szathmary.peter.simulation.entity.employee.EmployeeStatus;
 import szathmary.peter.statistic.ContinuousStatistic;
 import szathmary.peter.statistic.DiscreteStatistic;
 import szathmary.peter.statistic.Statistic;
@@ -29,7 +30,7 @@ public class ElectroShopSimulation extends SimulationCore implements IReplicatio
   public static final double CLOSING_HOURS_OF_TICKET_MACHINE = 8 * 60 * 60;
   public static final int SERVICE_STATION_QUEUE_CAPACITY = 9;
   public static final double
-      RATIO_OF_CASUAL_AND_CONTRACT_SERVICE_STATION_VS_ONLINE_SERVICE_STATIONS = 2.0 / 3.0;
+      ONLINE_SERVICE_STATIONS_VS_RATIO_OF_CASUAL_AND_CONTRACT_SERVICE_STATION = 1.0 / 3.0;
   private final List<IObserver> observers;
   private final int numberOfServiceStations;
   private final int numberOfCashRegisters;
@@ -78,6 +79,11 @@ public class ElectroShopSimulation extends SimulationCore implements IReplicatio
   private final Statistic ticketQueueLengthStatisticSummary;
   private final Statistic ticketQueueLengthStatisticReplication;
   private final Statistic lastCustomerTimeLeftStatisticSummary;
+  private final Statistic cashRegistersWorkloadStatisticSummary;
+  private final Statistic serviceStationsWorkloadStatisticSummary;
+  private final Statistic ticketMachineWorkloadSummary;
+  private final Statistic ticketMachineWorkloadReplication;
+  private final Statistic customersServedStatisticSummary;
   private double lastCustomerLeavingTime;
   private List<Customer> allCustomerList;
   private Queue<Customer> ticketMachineQueue;
@@ -88,6 +94,7 @@ public class ElectroShopSimulation extends SimulationCore implements IReplicatio
   private boolean isTicketMachineServingCustomer;
   private boolean isTicketMachineStopped;
   private List<Employee> allEmployeesList;
+  private int countOfServedCustomers;
 
   public ElectroShopSimulation(
       long numberOfReplications,
@@ -103,19 +110,35 @@ public class ElectroShopSimulation extends SimulationCore implements IReplicatio
 
     initializeVariables();
 
-    this.timeInSystemStatisticReplications = new DiscreteStatistic("Time in system - replication");
-    this.timeInSystemStatisticSummary = new DiscreteStatistic("Time in system - summary");
+    this.timeInSystemStatisticReplications =
+        new DiscreteStatistic("Time in system - replication", false);
+    this.timeInSystemStatisticSummary = new DiscreteStatistic("Time in system - summary", false);
 
     this.timeInTicketQueueStatisticReplications =
-        new DiscreteStatistic("Time in ticket queue - replication");
+        new DiscreteStatistic("Time in ticket queue - replication", false);
     this.timeInTicketQueueStatisticSummary =
-        new DiscreteStatistic("Time in ticket queue - summary");
+        new DiscreteStatistic("Time in ticket queue - summary", false);
 
     this.ticketQueueLengthStatisticReplication =
-        new ContinuousStatistic("Ticket queue length - replication");
-    this.ticketQueueLengthStatisticSummary = new DiscreteStatistic("Ticket queue length - summary");
+        new ContinuousStatistic("Ticket queue length - replication", false);
+    this.ticketQueueLengthStatisticSummary =
+        new DiscreteStatistic("Ticket queue length - summary", false);
 
-    this.lastCustomerTimeLeftStatisticSummary = new DiscreteStatistic("Leaving time - summary");
+    this.lastCustomerTimeLeftStatisticSummary =
+        new DiscreteStatistic("Leaving time - summary", true);
+
+    this.cashRegistersWorkloadStatisticSummary =
+        new DiscreteStatistic("Cash registers workload - summary", false);
+    this.serviceStationsWorkloadStatisticSummary =
+        new DiscreteStatistic("Service stations workload - summary", false);
+
+    this.ticketMachineWorkloadSummary =
+        new DiscreteStatistic("Ticket machine workload - summary", false);
+    this.ticketMachineWorkloadReplication =
+        new ContinuousStatistic("Ticket machine workload - replication", false);
+
+    this.customersServedStatisticSummary =
+        new DiscreteStatistic("Customers served - summary", false);
   }
 
   private void initializeVariables() {
@@ -141,21 +164,26 @@ public class ElectroShopSimulation extends SimulationCore implements IReplicatio
     for (int i = 0; i < numberOfCashRegisters; i++) {
       CashRegister cashRegister = new CashRegister(Integer.toString(i + 1));
       cashRegisters.add(cashRegister);
+      cashRegister.getEmployee().setStatus(EmployeeStatus.IDLE);
       addEmployee(cashRegister.getEmployee());
     }
+
+    this.countOfServedCustomers = 0;
   }
 
   private void initializeServingStations(int numberOfServiceStations) {
-    int numberOfCasualAndContractServiceStations =
+    int numberOfOnlineServiceStations =
         (int)
-            Math.ceil(
-                RATIO_OF_CASUAL_AND_CONTRACT_SERVICE_STATION_VS_ONLINE_SERVICE_STATIONS
+            Math.floor(
+                ONLINE_SERVICE_STATIONS_VS_RATIO_OF_CASUAL_AND_CONTRACT_SERVICE_STATION
                     * numberOfServiceStations);
 
     for (int i = 0; i < numberOfServiceStations; i++) {
       ServiceStation serviceStation =
-          new ServiceStation(i < numberOfCasualAndContractServiceStations);
+          new ServiceStation(i < numberOfOnlineServiceStations, String.valueOf(i + 1));
       serviceStations.add(serviceStation);
+
+      serviceStation.getEmployee().setStatus(EmployeeStatus.IDLE);
       addEmployee(serviceStation.getEmployee());
     }
   }
@@ -166,6 +194,10 @@ public class ElectroShopSimulation extends SimulationCore implements IReplicatio
     System.out.println(timeInTicketQueueStatisticSummary);
     System.out.println(ticketQueueLengthStatisticSummary);
     System.out.println(lastCustomerTimeLeftStatisticSummary);
+    System.out.println(serviceStationsWorkloadStatisticSummary);
+    System.out.println(cashRegistersWorkloadStatisticSummary);
+    System.out.println(ticketMachineWorkloadSummary);
+    System.out.println(customersServedStatisticSummary);
   }
 
   @Override
@@ -176,6 +208,19 @@ public class ElectroShopSimulation extends SimulationCore implements IReplicatio
     ticketQueueLengthStatisticSummary.addObservation(
         ticketQueueLengthStatisticReplication.getMean());
     lastCustomerTimeLeftStatisticSummary.addObservation(lastCustomerLeavingTime);
+
+    for (ServiceStation serviceStation : serviceStations) {
+      serviceStationsWorkloadStatisticSummary.addObservation(
+          serviceStation.getWorkloadStatistics().getMean());
+    }
+
+    for (CashRegister cashRegister : cashRegisters) {
+      cashRegistersWorkloadStatisticSummary.addObservation(
+          cashRegister.getAverageWorkloadOfCashRegister().getMean());
+    }
+
+    ticketMachineWorkloadSummary.addObservation(ticketMachineWorkloadReplication.getMean());
+    customersServedStatisticSummary.addObservation(countOfServedCustomers);
 
     sendNotifications();
   }
@@ -198,12 +243,15 @@ public class ElectroShopSimulation extends SimulationCore implements IReplicatio
     allEmployeesList.clear();
     allCustomerList.clear();
     resetCurrentTime();
+    countOfServedCustomers = 0;
+    lastCustomerLeavingTime = 0.0;
 
     initializeVariables();
 
     timeInSystemStatisticReplications.clear();
     timeInTicketQueueStatisticReplications.clear();
     ticketQueueLengthStatisticReplication.clear();
+    ticketMachineWorkloadReplication.clear();
     addStartingEvent();
   }
 
@@ -212,10 +260,20 @@ public class ElectroShopSimulation extends SimulationCore implements IReplicatio
   }
 
   @Override
-  public void beforeReplications() {}
+  public void beforeReplications() {
+    cashRegistersWorkloadStatisticSummary.clear();
+    serviceStationsWorkloadStatisticSummary.clear();
+    ticketQueueLengthStatisticSummary.clear();
+    lastCustomerTimeLeftStatisticSummary.clear();
+    timeInSystemStatisticSummary.clear();
+    timeInTicketQueueStatisticSummary.clear();
+    ticketMachineWorkloadSummary.clear();
+    customersServedStatisticSummary.clear();
+  }
 
   public boolean isServiceQueueFull() {
-    return onlineCustomersQueue.size() + casualAndContractCustomerQueue.size() == 8;
+    return onlineCustomersQueue.size() + casualAndContractCustomerQueue.size()
+        >= SERVICE_STATION_QUEUE_CAPACITY;
   }
 
   public boolean isAtLeastOneServiceFree(boolean isOnlineService) {
@@ -263,6 +321,8 @@ public class ElectroShopSimulation extends SimulationCore implements IReplicatio
   public ElectroShopSimulation setTicketMachineServingCustomer(
       boolean ticketMachineServingCustomer) {
     isTicketMachineServingCustomer = ticketMachineServingCustomer;
+    ticketMachineWorkloadReplication.addObservation(
+        ticketMachineServingCustomer ? 1 : 0, getCurrentTime());
     return this;
   }
 
@@ -308,7 +368,7 @@ public class ElectroShopSimulation extends SimulationCore implements IReplicatio
               customer.getCustomerType()));
     }
 
-    if (casualAndContractCustomerQueue.size() == SERVICE_STATION_QUEUE_CAPACITY) {
+    if (isServiceQueueFull()) {
       throw new IllegalStateException(
           String.format(
               "Cannot add another customer to queue for casual and contract customers, current capacity is %d",
@@ -337,7 +397,7 @@ public class ElectroShopSimulation extends SimulationCore implements IReplicatio
               customer.getCustomerType()));
     }
 
-    if (onlineCustomersQueue.size() == SERVICE_STATION_QUEUE_CAPACITY) {
+    if (isServiceQueueFull()) {
       throw new IllegalStateException(
           String.format(
               "Cannot add another customer to queue for online customers, current capacity is %d",
@@ -447,13 +507,9 @@ public class ElectroShopSimulation extends SimulationCore implements IReplicatio
             .filter(index -> cashRegistersQueueLength[index] == minValue)
             .toArray();
 
-    if (minValuesIndeces.length == 1) {
-      return cashRegisters.get(minValuesIndeces[0]);
-    } else {
-      return cashRegisters.get(
-          generateCashRegisterFromAvailableOptions(
-              equalQueueCashRegistersChoosingRandomgenerator.sample(), minValuesIndeces.length));
-    }
+    return cashRegisters.get(
+        generateCashRegisterFromAvailableOptions(
+            equalQueueCashRegistersChoosingRandomgenerator.sample(), minValuesIndeces.length));
   }
 
   private int generateCashRegisterFromAvailableOptions(double sample, int numberOfCashRegisters) {
@@ -514,7 +570,15 @@ public class ElectroShopSimulation extends SimulationCore implements IReplicatio
         timeInTicketQueueStatisticReplications,
         ticketQueueLengthStatisticSummary,
         ticketQueueLengthStatisticReplication,
-        lastCustomerTimeLeftStatisticSummary);
+        lastCustomerTimeLeftStatisticSummary,
+        serviceStationsWorkloadStatisticSummary,
+        cashRegistersWorkloadStatisticSummary,
+        ticketMachineWorkloadSummary,
+        customersServedStatisticSummary);
+  }
+
+  public void increaseCountOfServedCustomers() {
+    countOfServedCustomers++;
   }
 
   @Override

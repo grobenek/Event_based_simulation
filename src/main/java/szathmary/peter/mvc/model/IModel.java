@@ -12,5 +12,5 @@ public interface IModel extends IReplicationObservable, IObserver {
 
   void setVerboseSimulation(boolean verbose);
 
-    void changeSimulationSpeed(int secondsInOneTick);
+  void changeSimulationSpeed(int secondsInOneTick);
 }

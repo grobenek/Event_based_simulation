@@ -1,7 +1,5 @@
 package szathmary.peter.simulation;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.PriorityQueue;
 import szathmary.peter.event.Event;
 import szathmary.peter.event.SleepEvent;

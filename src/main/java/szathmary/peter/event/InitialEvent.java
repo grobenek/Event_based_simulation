@@ -12,10 +12,7 @@ public class InitialEvent extends Event {
   @Override
   public void execute(SimulationCore simulationCore) {
     ElectroShopSimulation electroShopSimulation = ((ElectroShopSimulation) simulationCore);
-    Event customerArrivalEvent =
-        new CustomerArrivalInSystemEvent(
-            getTimestamp()
-                + electroShopSimulation.getTimeBetweenCustomerArrivalsRandomGenerator().sample());
+    Event customerArrivalEvent = new CustomerArrivalInSystemEvent(electroShopSimulation.getTimeBetweenCustomerArrivalsRandomGenerator().sample() + getTimestamp());
 
     simulationCore.addEvent(customerArrivalEvent);
 

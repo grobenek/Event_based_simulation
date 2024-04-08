@@ -33,8 +33,15 @@ public class EndOfOnlineServiceEvent extends Event {
     servedCustomer.setTimeOfEnteringCheckoutQueue(getTimestamp());
     cashRegisterToPutCustomerIn.addCustomerToQueue(servedCustomer);
 
+    currentServiceStation.getEmployee().setStatus(EmployeeStatus.IDLE);
+
+    if (!cashRegisterToPutCustomerIn.isServing()) {
+      electroShopSimulation.addEvent(
+          new RemoveCustomerFromCashRegisterQueue(getTimestamp(), cashRegisterToPutCustomerIn));
+    }
+
     if (servedCustomer.getOrderSize() == OrderSize.SMALL) {
-      currentServiceStation.setServing(false);
+      currentServiceStation.setServing(false, getTimestamp());
       currentServiceStation.setCurrentServedCustomer(null);
 
       // service of next customer is being planned
@@ -42,11 +49,6 @@ public class EndOfOnlineServiceEvent extends Event {
         electroShopSimulation.addEvent(new RemoveCustomerFromOnlineQueueEvent(getTimestamp()));
       }
     }
-
-    currentServiceStation.getEmployee().setStatus(EmployeeStatus.IDLE);
-
-    electroShopSimulation.addEvent(
-        new RemoveCustomerFromCashRegisterQueue(getTimestamp(), cashRegisterToPutCustomerIn));
   }
 
   @Override

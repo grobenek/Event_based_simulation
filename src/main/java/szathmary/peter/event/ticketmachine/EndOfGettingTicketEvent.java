@@ -19,26 +19,6 @@ public class EndOfGettingTicketEvent extends Event {
     this.servedCustomer = serverCustomer;
   }
 
-  private static CustomerType generateCustomerType(double generatedRandomValue) {
-    double cummulatedProbability = 0.0;
-    CustomerType selectedCustomerType = null;
-    for (int i = 0; i < CustomerType.values().length; i++) {
-      CustomerType customerType = CustomerType.values()[i];
-
-      cummulatedProbability += customerType.getTypeProbability();
-
-      if (generatedRandomValue <= cummulatedProbability) {
-        selectedCustomerType = customerType;
-        break;
-      }
-    }
-
-    if (selectedCustomerType == null) {
-      throw new IllegalStateException("No customer type was selected!");
-    }
-    return selectedCustomerType;
-  }
-
   @Override
   public void execute(SimulationCore simulationCore) {
     ElectroShopSimulation electroShopSimulation = ((ElectroShopSimulation) simulationCore);
@@ -67,15 +47,13 @@ public class EndOfGettingTicketEvent extends Event {
 
     switch (selectedCustomerType) {
       case CASUAL, CONTRACT -> {
-        if (electroShopSimulation.isAtLeastOneServiceFree(false)
-            && !electroShopSimulation.isCasualContractCustomerQueueEmpty()) {
+        if (electroShopSimulation.isAtLeastOneServiceFree(false)) {
           electroShopSimulation.addEvent(
               new RemoveCustomerFromCasualAndContractQueueEvent(getTimestamp()));
         }
       }
       case ONLINE -> {
-        if (electroShopSimulation.isAtLeastOneServiceFree(true)
-            && !electroShopSimulation.isOnlineCustomerQueueEmpty()) {
+        if (electroShopSimulation.isAtLeastOneServiceFree(true)) {
           electroShopSimulation.addEvent(new RemoveCustomerFromOnlineQueueEvent(getTimestamp()));
         }
       }
@@ -90,11 +68,32 @@ public class EndOfGettingTicketEvent extends Event {
         && (!electroShopSimulation.isTicketMachineServingCustomer())
         && (!electroShopSimulation.isTicketQueueEmpty())) {
       electroShopSimulation.addEvent(new RemoveCustomerFromTicketQueue(getTimestamp()));
-    }
+    } //TODO mozno tu chyba
   }
 
   @Override
   public String getEventDescription() {
-    return String.format("Customer stopped getting ticket at %s", TimeFormatter.getFormattedTime(getTimestamp()));
+    return String.format(
+        "Customer stopped getting ticket at %s", TimeFormatter.getFormattedTime(getTimestamp()));
+  }
+
+  private static CustomerType generateCustomerType(double generatedRandomValue) {
+    double cummulatedProbability = 0.0;
+    CustomerType selectedCustomerType = null;
+    for (int i = 0; i < CustomerType.values().length; i++) {
+      CustomerType customerType = CustomerType.values()[i];
+
+      cummulatedProbability += customerType.getTypeProbability();
+
+      if (generatedRandomValue <= cummulatedProbability) {
+        selectedCustomerType = customerType;
+        break;
+      }
+    }
+
+    if (selectedCustomerType == null) {
+      throw new IllegalStateException("No customer type was selected!");
+    }
+    return selectedCustomerType;
   }
 }

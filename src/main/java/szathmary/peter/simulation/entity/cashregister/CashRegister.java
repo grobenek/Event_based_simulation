@@ -5,6 +5,8 @@ import java.util.Queue;
 import szathmary.peter.simulation.entity.customer.Customer;
 import szathmary.peter.simulation.entity.employee.Employee;
 import szathmary.peter.simulation.entity.employee.EmployeeType;
+import szathmary.peter.statistic.ContinuousStatistic;
+import szathmary.peter.statistic.Statistic;
 
 /** Created by petos on 29/03/2024. */
 public class CashRegister {
@@ -12,7 +14,8 @@ public class CashRegister {
   private final Employee employee;
   private boolean isServing;
   private Customer currentServedCustomer;
-  private String name;
+  private final String name;
+  private final ContinuousStatistic averageWorkloadOfCashRegister;
 
   public CashRegister(String name) {
     this.name = name;
@@ -20,6 +23,7 @@ public class CashRegister {
     this.employee = new Employee(EmployeeType.CASH_REGISTER);
     this.isServing = false;
     this.currentServedCustomer = null;
+    this.averageWorkloadOfCashRegister = new ContinuousStatistic("Average workload of cash register", false);
   }
 
   public Employee getEmployee() {
@@ -42,8 +46,9 @@ public class CashRegister {
     return isServing;
   }
 
-  public CashRegister setServing(boolean serving) {
+  public CashRegister setServing(boolean serving, double timestamp) {
     isServing = serving;
+    averageWorkloadOfCashRegister.addObservation(serving ? 1 : 0, timestamp);
     return this;
   }
 
@@ -66,5 +71,9 @@ public class CashRegister {
 
   public String getName() {
     return name;
+  }
+
+  public Statistic getAverageWorkloadOfCashRegister() {
+    return averageWorkloadOfCashRegister;
   }
 }

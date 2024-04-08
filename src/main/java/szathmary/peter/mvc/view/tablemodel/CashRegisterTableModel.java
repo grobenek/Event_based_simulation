@@ -6,7 +6,7 @@ import szathmary.peter.simulation.entity.cashregister.CashRegister;
 
 /** Created by petos on 01/04/2024. */
 public class CashRegisterTableModel extends AbstractTableModel {
-  private final String[] COLUMN_NAMES = {"Name", "Queue length"};
+  private final String[] COLUMN_NAMES = {"Name", "Queue length", "Average workload"};
   private List<CashRegister> cashRegisters;
 
   public CashRegisterTableModel(List<CashRegister> cashRegisters) {
@@ -39,6 +39,9 @@ public class CashRegisterTableModel extends AbstractTableModel {
       }
       case 1 -> {
         return cashRegister.getQueueLength();
+      }
+      case 2 -> {
+        return String.format("%.2f", cashRegister.getAverageWorkloadOfCashRegister().getMean() * 100);
       }
       default -> throw new IllegalStateException("Selecting unknown column!");
     }

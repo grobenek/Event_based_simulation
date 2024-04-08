@@ -1,25 +1,29 @@
 package szathmary.peter.mvc.view.tablemodel;
 
+import szathmary.peter.simulation.entity.ServiceStation;
+
 import javax.swing.table.AbstractTableModel;
+import java.util.ArrayList;
+import java.util.List;
 
 /** Created by petos on 01/04/2024. */
 public class ServiceStationTableModel extends AbstractTableModel {
-  private static final String[] COLUMN_NAMES = {"Queue length"}; // TODO toto teoreticky netreba
-  private int serviceStationsQueueLength = 0;
+  private static final String[] COLUMN_NAMES = {"Name", "Work load"}; // TODO toto teoreticky netreba
+  private List<ServiceStation> serviceStationList;
 
   public ServiceStationTableModel(int serviceStationsQueueLength) {
-    this.serviceStationsQueueLength = serviceStationsQueueLength;
+    this.serviceStationList = new ArrayList<>();
   }
 
-  public ServiceStationTableModel setServiceStationsQueueLength(int serviceStationsQueueLength) {
-    this.serviceStationsQueueLength = serviceStationsQueueLength;
+  public ServiceStationTableModel setServiceStations(List<ServiceStation> serviceStationList) {
+    this.serviceStationList = serviceStationList;
     fireTableDataChanged();
     return this;
   }
 
   @Override
   public int getRowCount() {
-    return 1;
+    return serviceStationList.size();
   }
 
   @Override
@@ -29,7 +33,17 @@ public class ServiceStationTableModel extends AbstractTableModel {
 
   @Override
   public Object getValueAt(int rowIndex, int columnIndex) {
-    return serviceStationsQueueLength;
+    ServiceStation serviceStation = serviceStationList.get(rowIndex);
+
+    switch (columnIndex) {
+      case 0 -> {
+        return serviceStation.getName();
+      }
+      case 1 -> {
+        return String.format("%.02f", serviceStation.getWorkloadStatistics().getMean() * 100);
+      }
+      default -> throw new IllegalStateException();
+    }
   }
 
   @Override

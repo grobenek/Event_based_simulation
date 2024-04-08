@@ -14,10 +14,17 @@ import szathmary.peter.util.TimeFormatter;
 /** Created by petos on 30/03/2024. */
 public class StartOfCasualAndContractCustomerServiceEvent extends Event {
   private final Customer servedCustomer;
+  private final ServiceStation serviceStation;
 
   public StartOfCasualAndContractCustomerServiceEvent(
-      Double timestamp, Customer customerToBeServed) {
+          Double timestamp, Customer customerToBeServed, ServiceStation freeServiceStation) {
     super(timestamp);
+
+    if (freeServiceStation.isServing()) {
+      throw new IllegalStateException(String.format("Cannot start service in casual and contract service station, because it is already serving at %f!", getTimestamp()));
+    }
+
+    this.serviceStation = freeServiceStation;
 
     CustomerType customerType = customerToBeServed.getCustomerType();
     if (customerType != CustomerType.CASUAL && customerType != CustomerType.CONTRACT) {
@@ -27,6 +34,64 @@ public class StartOfCasualAndContractCustomerServiceEvent extends Event {
     }
 
     this.servedCustomer = customerToBeServed;
+  }
+
+  @Override
+  public void execute(SimulationCore simulationCore) {
+    ElectroShopSimulation electroShopSimulation = ((ElectroShopSimulation) simulationCore);
+
+    ServiceStation freeServiceStation = electroShopSimulation.getFreeServiceStation(false);
+
+    freeServiceStation.setServing(true, getTimestamp());
+    freeServiceStation.setCurrentServedCustomer(servedCustomer);
+    freeServiceStation.getEmployee().setStatus(EmployeeStatus.SERVING);
+
+    servedCustomer.setTimeOfStartOfService(getTimestamp());
+
+    // getting type of order
+    double generatedValueOfOrderType =
+        electroShopSimulation.getTypeOfOrderRandomGenerator().sample();
+    OrderType orderType = generateOrderType(generatedValueOfOrderType);
+
+    double lengthOfService;
+
+    switch (orderType) {
+      case EASY ->
+          lengthOfService = electroShopSimulation.getEasyOrderTimeRandomGenerator().sample();
+
+      case MEDIUM ->
+          lengthOfService = electroShopSimulation.getMediumOrderTimeRandomGenerator().sample();
+
+      case HARD ->
+          lengthOfService = electroShopSimulation.getHardOrderTimeRandomGenerator().sample();
+
+      default ->
+          throw new IllegalStateException(
+              String.format(
+                  "Unknown %s order type selected at %s!", orderType, getClass().getName()));
+    }
+
+    lengthOfService +=
+        electroShopSimulation
+            .getTimeToFinishOrderForCasualAndContractCustomersRandomGenerator()
+            .sample();
+
+    OrderSize orderSize =
+        generateOrderSize(electroShopSimulation.getOrderSizeRandomGenerator().sample());
+
+    servedCustomer.setOrderSize(orderSize);
+    servedCustomer.setServiceStationThatServedCustomer(freeServiceStation);
+
+    electroShopSimulation.addEvent(
+        new EndOfCasualAndContractServiceEvent(
+            getTimestamp() + lengthOfService, servedCustomer, freeServiceStation));
+  }
+
+  @Override
+  public String getEventDescription() {
+    return String.format(
+        "Serving %s customer at casual and contract service station at %s",
+        servedCustomer.getCustomerType(), TimeFormatter.getFormattedTime(getTimestamp()));
   }
 
   private static OrderType generateOrderType(double generatedRandomValue) {
@@ -67,58 +132,5 @@ public class StartOfCasualAndContractCustomerServiceEvent extends Event {
       throw new IllegalStateException("No order size was selected!");
     }
     return selectedOrderSize;
-  }
-
-  @Override
-  public void execute(SimulationCore simulationCore) {
-    ElectroShopSimulation electroShopSimulation = ((ElectroShopSimulation) simulationCore);
-
-    ServiceStation freeServiceStation = electroShopSimulation.getFreeServiceStation(false);
-
-    freeServiceStation.setServing(true);
-    freeServiceStation.setCurrentServedCustomer(servedCustomer);
-    freeServiceStation.getEmployee().setStatus(EmployeeStatus.SERVING);
-
-    servedCustomer.setTimeOfStartOfService(getTimestamp());
-
-    // getting type of order
-    double generatedValueOfOrderType =
-        electroShopSimulation.getTypeOfOrderRandomGenerator().sample();
-    OrderType orderType = generateOrderType(generatedValueOfOrderType);
-
-    double lengthOfService;
-
-    switch (orderType) {
-      case EASY ->
-          lengthOfService = electroShopSimulation.getEasyOrderTimeRandomGenerator().sample();
-
-      case MEDIUM ->
-          lengthOfService = electroShopSimulation.getMediumOrderTimeRandomGenerator().sample();
-
-      case HARD ->
-          lengthOfService = electroShopSimulation.getHardOrderTimeRandomGenerator().sample();
-
-      default ->
-          throw new IllegalStateException(
-              String.format(
-                  "Unknown %s order type selected at %s!", orderType, getClass().getName()));
-    }
-
-    OrderSize orderSize =
-        generateOrderSize(electroShopSimulation.getOrderSizeRandomGenerator().sample());
-
-    servedCustomer.setOrderSize(orderSize);
-    servedCustomer.setServiceStationThatServedCustomer(freeServiceStation);
-
-    electroShopSimulation.addEvent(
-        new EndOfCasualAndContractServiceEvent(
-            getTimestamp() + lengthOfService, servedCustomer, freeServiceStation));
-  }
-
-  @Override
-  public String getEventDescription() {
-    return String.format(
-        "Serving %s customer at casual and contract service station at %s",
-        servedCustomer.getCustomerType(), TimeFormatter.getFormattedTime(getTimestamp()));
   }
 }

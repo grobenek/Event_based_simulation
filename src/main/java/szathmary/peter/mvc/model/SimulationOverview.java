@@ -22,4 +22,8 @@ public record SimulationOverview(
     Statistic timeInTicketQueueStatisticReplications,
     Statistic ticketQueueLengthStatisticSummary,
     Statistic ticketQueueLengthStatisticReplication,
-    Statistic lastCustomerTimeLeftStatisticSummary) {}
+    Statistic lastCustomerTimeLeftStatisticSummary,
+    Statistic serviceStationWorkloadStatisticSummary,
+    Statistic cashRegisterWorkloadStatisticSummary,
+    Statistic ticketMachineWorkloadSummary,
+    Statistic customersServedStatisticSummary) {}

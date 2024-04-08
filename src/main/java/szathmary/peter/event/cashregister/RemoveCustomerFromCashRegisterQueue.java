@@ -21,9 +21,14 @@ public class RemoveCustomerFromCashRegisterQueue extends Event {
   @Override
   public void execute(SimulationCore simulationCore) {
     ElectroShopSimulation electroShopSimulation = ((ElectroShopSimulation) simulationCore);
+
+    if (cashRegisterOwningQueue.isServing()) {
+      throw new IllegalStateException("Cannot remove customer from cash register queue, becasue owning cash register is serving!");
+    }
+
     Customer removedCustomerFromQueue = cashRegisterOwningQueue.removeCustomerFromQueue();
 
-    cashRegisterOwningQueue.setServing(true);
+    cashRegisterOwningQueue.setServing(true, getTimestamp());
     cashRegisterOwningQueue.setCurrentServedCustomer(removedCustomerFromQueue);
 
     electroShopSimulation.addEvent(
@@ -33,6 +38,8 @@ public class RemoveCustomerFromCashRegisterQueue extends Event {
 
   @Override
   public String getEventDescription() {
-    return String.format("Removing customer from cash register queue at %s!", TimeFormatter.getFormattedTime(getTimestamp()));
+    return String.format(
+        "Removing customer from cash register queue at %s!",
+        TimeFormatter.getFormattedTime(getTimestamp()));
   }
 }

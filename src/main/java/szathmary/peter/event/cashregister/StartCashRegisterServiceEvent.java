@@ -28,7 +28,7 @@ public class StartCashRegisterServiceEvent extends Event {
     servedCustomer.setTimeOfStartCheckoutService(getTimestamp());
 
     currentCashRegister.getEmployee().setStatus(EmployeeStatus.SERVING);
-    currentCashRegister.setServing(true);
+    currentCashRegister.setServing(true, getTimestamp());
     currentCashRegister.setCurrentServedCustomer(servedCustomer);
 
     double timeOfEndOfService =

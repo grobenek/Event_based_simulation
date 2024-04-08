@@ -1,7 +1,6 @@
 package szathmary.peter.mvc.view;
 
 import java.util.List;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Semaphore;
 import javax.swing.*;
 import javax.swing.text.DefaultCaret;
@@ -68,6 +67,7 @@ public class MainWindow extends JFrame implements IMainWindow {
   private CashRegisterTableModel cashRegistersTableModel;
   private DefaultCategoryDataset barChartDataset;
   private JFreeChart correlationBarChart;
+  private boolean isCorrelationRunning = false;
 
   public MainWindow(IController controller) {
     this.controller = controller;
@@ -95,6 +95,7 @@ public class MainWindow extends JFrame implements IMainWindow {
     startSimulationButton.addActionListener(
         e -> {
           startSimulation();
+          tabPane.setEnabled(false);
           setParametersButton.setEnabled(false);
           startSimulationButton.setEnabled(false);
           numberOfCashRegistersTextField.setEnabled(false);
@@ -110,6 +111,7 @@ public class MainWindow extends JFrame implements IMainWindow {
           stopSimulation();
           stopSimulationButton.setEnabled(false);
 
+          tabPane.setEnabled(true);
           setParametersButton.setEnabled(true);
           startSimulationButton.setEnabled(true);
           numberOfCashRegistersTextField.setEnabled(true);
@@ -150,6 +152,10 @@ public class MainWindow extends JFrame implements IMainWindow {
       return;
     }
 
+    if (isCorrelationRunning) {
+      return;
+    }
+
     SwingUtilities.invokeLater(
         () -> {
           SimulationOverview simulationOverview = replicationObservable.getSimulationOverview();
@@ -167,23 +173,38 @@ public class MainWindow extends JFrame implements IMainWindow {
 
     if (verboseCheckBox.isSelected()) {
       replicationStatisticTextArea.setEnabled(true);
+      customerTable.setEnabled(true);
+      employeesTable.setEnabled(true);
+      cashRegistersTable.setEnabled(true);
+      serviceStationsTable.setEnabled(true);
+
       replicationStatisticTextArea.setText(getReplicationStatisticsToString(simulationOverview));
+      List<Customer> customers = simulationOverview.customerList();
+      customerTableModel.setCustomerList(customers);
+
+      List<Employee> employees = simulationOverview.employeeList();
+      employeeTableModel.setEmployees(employees);
+
+      List<CashRegister> cashRegisters = simulationOverview.cashRegisters();
+      cashRegistersTableModel.setCashRegisters(cashRegisters);
+
+        serviceStationsTableModel.setServiceStations(simulationOverview.serviceStations());
     } else {
       replicationStatisticTextArea.setEnabled(false);
+      customerTable.setEnabled(false);
+      employeesTable.setEnabled(false);
+      cashRegistersTable.setEnabled(false);
+      serviceStationsTable.setEnabled(false);
+
+      customerTableModel.setCustomerList(List.of());
+
+      employeeTableModel.setEmployees(List.of());
+
+      cashRegistersTableModel.setCashRegisters(List.of());
+
+      serviceStationsTableModel.setServiceStations(List.of());
     }
     summaryStatisticTextArea.setText(getSummaryStatisticsToString(simulationOverview));
-
-    List<Customer> customers = simulationOverview.customerList();
-    customerTableModel.setCustomerList(customers);
-
-    List<Employee> employees = simulationOverview.employeeList();
-    employeeTableModel.setEmployees(employees);
-
-    List<CashRegister> cashRegisters = simulationOverview.cashRegisters();
-    cashRegistersTableModel.setCashRegisters(cashRegisters);
-
-    int serviceStationsQueueLength = simulationOverview.serviceStationsQueueLength();
-    serviceStationsTableModel.setServiceStationsQueueLength(serviceStationsQueueLength);
   }
 
   private String getReplicationStatisticsToString(SimulationOverview simulationOverview) {
@@ -203,6 +224,14 @@ public class MainWindow extends JFrame implements IMainWindow {
         + "\n"
         + simulationOverview.timeInTicketQueueStatisticSummary()
         + "\n"
+        + simulationOverview.serviceStationWorkloadStatisticSummary()
+        + "\n"
+        + simulationOverview.cashRegisterWorkloadStatisticSummary()
+        + "\n"
+        + simulationOverview.ticketMachineWorkloadSummary()
+        + "\n"
+        + simulationOverview.customersServedStatisticSummary()
+        + "\n"
         + simulationOverview.lastCustomerTimeLeftStatisticSummary();
   }
 
@@ -212,7 +241,12 @@ public class MainWindow extends JFrame implements IMainWindow {
         new SwingWorker<>() {
           @Override
           protected Void doInBackground() {
-            controller.startSimulation();
+            try {
+              controller.startSimulation();
+            } catch (Exception e) {
+              System.out.println(e.getLocalizedMessage());
+              throw new RuntimeException(e);
+            }
             return null;
           }
         };
@@ -244,65 +278,68 @@ public class MainWindow extends JFrame implements IMainWindow {
   }
 
   private void startPrintingCorrelationChart() {
-    tabPane.setEnabled(false);
+    SwingUtilities.invokeLater(
+        () -> {
+          tabPane.setEnabled(false);
+          startCorrelationButton.setEnabled(false);
+          barChartDataset.clear();
+          correlationBarChart.fireChartChanged();
+          numberOfCashRegistersStartTextField.setEnabled(false);
+          numberOfCashRegistersEndTextField.setEnabled(false);
+        });
 
-    int numberOfCashRegistersToSimulate =
-        Integer.parseInt(numberOfCashRegistersEndTextField.getText())
-            - Integer.parseInt(numberOfCashRegistersStartTextField.getText());
-
-    Semaphore semaphore = new Semaphore(1);
-
-    for (int i = 1; i <= numberOfCashRegistersToSimulate + 1; i++) {
-        int finalI = i;
-
-      SwingWorker<SimulationOverview, Void> worker =
-          new SwingWorker<>() {
-            @Override
-            protected SimulationOverview doInBackground() {
+    SwingWorker<Void, Void> worker =
+        new SwingWorker<>() {
+          @Override
+          protected Void doInBackground() {
+            isCorrelationRunning = true;
+            Semaphore semaphore = new Semaphore(1);
+            for (int i = Integer.parseInt(numberOfCashRegistersStartTextField.getText());
+                i <= Integer.parseInt(numberOfCashRegistersEndTextField.getText());
+                i++) {
               try {
-                // Acquire the permit before starting the simulation
                 semaphore.acquire();
-                controller.setParameters(
-                    30_000, //TODO prist na to AKO ZACHOVAT PORADIE - potom spravit interval spolahlivosti, vyrazenie, ako vyratat integral a evenry pozriet - teams
-                    Integer.parseInt(numberOfServiceStationsTextField.getText()),
-                    finalI,
-                    false);
-                controller.startSimulation();
-                return controller.getSimulationOverview();
               } catch (InterruptedException e) {
-                e.printStackTrace();
-                return null;
-              } finally {
-                // Release the permit after the simulation finishes
-                semaphore.release();
+                throw new RuntimeException(e);
               }
-            }
+              controller.setParameters(
+                  25000, Integer.parseInt(numberOfServiceStationsTextField.getText()), i, false);
+              controller.startSimulation();
+              SimulationOverview simulationOverview = controller.getSimulationOverview();
+              semaphore.release();
 
-            @Override
-            protected void done() {
-              super.done();
               try {
-                // Wait for this simulation to finish
-                get();
-                // Add result of statistics to chart
-                barChartDataset.addValue(
-                    controller
-                        .getSimulationOverview()
-                        .timeInTicketQueueStatisticSummary()
-                        .getMean(),
-                    finalI + ". cash registers",
-                    String.valueOf(finalI));
-              } catch (InterruptedException | ExecutionException e) {
-                e.printStackTrace();
+                semaphore.acquire();
+              } catch (InterruptedException e) {
+                throw new RuntimeException(e);
               }
+
+              barChartDataset.addValue(
+                  simulationOverview.ticketQueueLengthStatisticSummary().getMean(),
+                  "row",
+                  i + " cash registers");
+
+              semaphore.release();
             }
-          };
 
-      worker.execute();
-    }
+            return null;
+          }
 
-    tabPane.setEnabled(true);
-    startCorrelationButton.setEnabled(true);
+          @Override
+          protected void done() {
+            super.done();
+            SwingUtilities.invokeLater(
+                () -> {
+                  tabPane.setEnabled(true);
+                  startCorrelationButton.setEnabled(true);
+                  isCorrelationRunning = false;
+                  numberOfCashRegistersStartTextField.setEnabled(true);
+                  numberOfCashRegistersEndTextField.setEnabled(true);
+                });
+          }
+        };
+
+    worker.execute();
   }
 
   private void createUIComponents() {
@@ -335,12 +372,12 @@ public class MainWindow extends JFrame implements IMainWindow {
           correlationBarChart =
               ChartFactory.createBarChart(
                   "Correlation",
-                  "Avarege ticket queue length",
                   "Number of cash registers",
+                  "Avarege ticket queue length",
                   barChartDataset,
                   PlotOrientation.VERTICAL,
-                  true,
-                  true,
+                  false,
+                  false,
                   false);
 
           chartPanel = new ChartPanel(correlationBarChart);

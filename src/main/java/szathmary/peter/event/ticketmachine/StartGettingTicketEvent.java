@@ -33,6 +33,7 @@ public class StartGettingTicketEvent extends Event {
 
   @Override
   public String getEventDescription() {
-    return String.format("Customer is getting ticket at %s", TimeFormatter.getFormattedTime(getTimestamp()));
+    return String.format(
+        "Customer is getting ticket at %s", TimeFormatter.getFormattedTime(getTimestamp()));
   }
 }
