@@ -1,6 +1,6 @@
 package szathmary.peter.event;
 
-import szathmary.peter.event.ticketmachine.RemoveCustomerFromTicketQueue;
+import szathmary.peter.event.ticketmachine.StartGettingTicketEvent;
 import szathmary.peter.simulation.ElectroShopSimulation;
 import szathmary.peter.simulation.SimulationCore;
 import szathmary.peter.simulation.entity.customer.Customer;
@@ -32,13 +32,15 @@ public class CustomerArrivalInSystemEvent extends Event {
     // if the ticket machine is giving ticket and is empty, add event to remove customer from the
     // queue
     if ((!electroShopSimulation.isTicketMachineStopped())
-        && (!electroShopSimulation.isTicketMachineServingCustomer())) {
-      electroShopSimulation.addEvent(new RemoveCustomerFromTicketQueue(getTimestamp()));
+        && (!electroShopSimulation.isTicketMachineServingCustomer())
+        && (!electroShopSimulation.isTicketQueueEmpty())) {
+      electroShopSimulation.addEvent(new StartGettingTicketEvent(getTimestamp()));
     }
   }
 
   @Override
   public String getEventDescription() {
-    return String.format("Customer has arrived to the system at %s", TimeFormatter.getFormattedTime(getTimestamp()));
+    return String.format(
+        "Customer has arrived to the system at %s", TimeFormatter.getFormattedTime(getTimestamp()));
   }
 }

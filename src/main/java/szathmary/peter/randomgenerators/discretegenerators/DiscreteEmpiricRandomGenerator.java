@@ -33,7 +33,7 @@ public class DiscreteEmpiricRandomGenerator extends EmpiricNumberGenerator<Integ
       EmpiricOption<Integer> parameter = parameters.get(i);
       comulativeProbability += parameter.probability();
 
-      if (generatedProbabilityOfOption <= comulativeProbability) {
+      if (generatedProbabilityOfOption < comulativeProbability) {
         selectedParameterIndex = i;
         break;
       }

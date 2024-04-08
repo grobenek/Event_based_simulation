@@ -1,8 +1,8 @@
 package szathmary.peter.event.ticketmachine;
 
 import szathmary.peter.event.Event;
-import szathmary.peter.event.service.casualandcontract.RemoveCustomerFromCasualAndContractQueueEvent;
-import szathmary.peter.event.service.online.RemoveCustomerFromOnlineQueueEvent;
+import szathmary.peter.event.service.casualandcontract.StartOfCasualAndContractCustomerServiceEvent;
+import szathmary.peter.event.service.online.StartOnlineCustomerService;
 import szathmary.peter.simulation.ElectroShopSimulation;
 import szathmary.peter.simulation.SimulationCore;
 import szathmary.peter.simulation.entity.customer.Customer;
@@ -12,11 +12,32 @@ import szathmary.peter.util.TimeFormatter;
 /** Created by petos on 29/03/2024. */
 public class EndOfGettingTicketEvent extends Event {
   private final Customer servedCustomer;
+  private boolean wasCustomerPutTuServiceStation = false;
 
   public EndOfGettingTicketEvent(Double timestamp, Customer serverCustomer) {
     super(timestamp);
 
     this.servedCustomer = serverCustomer;
+  }
+
+  private static CustomerType generateCustomerType(double generatedRandomValue) {
+    double cummulatedProbability = 0.0;
+    CustomerType selectedCustomerType = null;
+    for (int i = 0; i < CustomerType.values().length; i++) {
+      CustomerType customerType = CustomerType.values()[i];
+
+      cummulatedProbability += customerType.getTypeProbability();
+
+      if (generatedRandomValue < cummulatedProbability) {
+        selectedCustomerType = customerType;
+        break;
+      }
+    }
+
+    if (selectedCustomerType == null) {
+      throw new IllegalStateException("No customer type was selected!");
+    }
+    return selectedCustomerType;
   }
 
   @Override
@@ -49,12 +70,14 @@ public class EndOfGettingTicketEvent extends Event {
       case CASUAL, CONTRACT -> {
         if (electroShopSimulation.isAtLeastOneServiceFree(false)) {
           electroShopSimulation.addEvent(
-              new RemoveCustomerFromCasualAndContractQueueEvent(getTimestamp()));
+              new StartOfCasualAndContractCustomerServiceEvent(getTimestamp()));
+          wasCustomerPutTuServiceStation = true;
         }
       }
       case ONLINE -> {
         if (electroShopSimulation.isAtLeastOneServiceFree(true)) {
-          electroShopSimulation.addEvent(new RemoveCustomerFromOnlineQueueEvent(getTimestamp()));
+          electroShopSimulation.addEvent(new StartOnlineCustomerService(getTimestamp()));
+          wasCustomerPutTuServiceStation = true;
         }
       }
       default ->
@@ -64,36 +87,17 @@ public class EndOfGettingTicketEvent extends Event {
                   selectedCustomerType, getClass().getName()));
     }
 
-    if ((!electroShopSimulation.isTicketMachineStopped())
+    if ((!wasCustomerPutTuServiceStation)
+        && (!electroShopSimulation.isTicketMachineStopped())
         && (!electroShopSimulation.isTicketMachineServingCustomer())
         && (!electroShopSimulation.isTicketQueueEmpty())) {
-      electroShopSimulation.addEvent(new RemoveCustomerFromTicketQueue(getTimestamp()));
-    } //TODO mozno tu chyba
+      electroShopSimulation.addEvent(new StartGettingTicketEvent(getTimestamp()));
+    } // TODO mozno tu chyba
   }
 
   @Override
   public String getEventDescription() {
     return String.format(
         "Customer stopped getting ticket at %s", TimeFormatter.getFormattedTime(getTimestamp()));
-  }
-
-  private static CustomerType generateCustomerType(double generatedRandomValue) {
-    double cummulatedProbability = 0.0;
-    CustomerType selectedCustomerType = null;
-    for (int i = 0; i < CustomerType.values().length; i++) {
-      CustomerType customerType = CustomerType.values()[i];
-
-      cummulatedProbability += customerType.getTypeProbability();
-
-      if (generatedRandomValue <= cummulatedProbability) {
-        selectedCustomerType = customerType;
-        break;
-      }
-    }
-
-    if (selectedCustomerType == null) {
-      throw new IllegalStateException("No customer type was selected!");
-    }
-    return selectedCustomerType;
   }
 }

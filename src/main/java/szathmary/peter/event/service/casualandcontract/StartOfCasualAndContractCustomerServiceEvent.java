@@ -1,6 +1,7 @@
 package szathmary.peter.event.service.casualandcontract;
 
 import szathmary.peter.event.Event;
+import szathmary.peter.event.ticketmachine.StartGettingTicketEvent;
 import szathmary.peter.simulation.ElectroShopSimulation;
 import szathmary.peter.simulation.SimulationCore;
 import szathmary.peter.simulation.entity.ServiceStation;
@@ -13,38 +14,85 @@ import szathmary.peter.util.TimeFormatter;
 
 /** Created by petos on 30/03/2024. */
 public class StartOfCasualAndContractCustomerServiceEvent extends Event {
-  private final Customer servedCustomer;
-  private final ServiceStation serviceStation;
+  private Customer servedCustomer;
 
-  public StartOfCasualAndContractCustomerServiceEvent(
-          Double timestamp, Customer customerToBeServed, ServiceStation freeServiceStation) {
+  public StartOfCasualAndContractCustomerServiceEvent(Double timestamp) {
     super(timestamp);
+  }
 
-    if (freeServiceStation.isServing()) {
-      throw new IllegalStateException(String.format("Cannot start service in casual and contract service station, because it is already serving at %f!", getTimestamp()));
+  private static OrderType generateOrderType(double generatedRandomValue) {
+    double cummulatedProbability = 0.0;
+    OrderType selectedOrderType = null;
+    for (int i = 0; i < OrderType.values().length; i++) {
+      OrderType orderType = OrderType.values()[i];
+
+      cummulatedProbability += orderType.getProbability();
+
+      if (generatedRandomValue < cummulatedProbability) {
+        selectedOrderType = orderType;
+        break;
+      }
     }
 
-    this.serviceStation = freeServiceStation;
+    if (selectedOrderType == null) {
+      throw new IllegalStateException("No order type was selected!");
+    }
+    return selectedOrderType;
+  }
 
-    CustomerType customerType = customerToBeServed.getCustomerType();
-    if (customerType != CustomerType.CASUAL && customerType != CustomerType.CONTRACT) {
-      throw new IllegalStateException(
-          String.format(
-              "Cannot serve %s customer at casual and contract service station!", customerType));
+  private static OrderSize generateOrderSize(double generatedRandomValue) {
+    double cummulatedProbability = 0.0;
+    OrderSize selectedOrderSize = null;
+    for (int i = 0; i < OrderSize.values().length; i++) {
+      OrderSize orderSize = OrderSize.values()[i];
+
+      cummulatedProbability += orderSize.getProbability();
+
+      if (generatedRandomValue < cummulatedProbability) {
+        selectedOrderSize = orderSize;
+        break;
+      }
     }
 
-    this.servedCustomer = customerToBeServed;
+    if (selectedOrderSize == null) {
+      throw new IllegalStateException("No order size was selected!");
+    }
+    return selectedOrderSize;
   }
 
   @Override
   public void execute(SimulationCore simulationCore) {
     ElectroShopSimulation electroShopSimulation = ((ElectroShopSimulation) simulationCore);
 
-    ServiceStation freeServiceStation = electroShopSimulation.getFreeServiceStation(false);
+    servedCustomer = electroShopSimulation.removeCustomerFromCasualAndContractCustomerQueue();
 
-    freeServiceStation.setServing(true, getTimestamp());
-    freeServiceStation.setCurrentServedCustomer(servedCustomer);
-    freeServiceStation.getEmployee().setStatus(EmployeeStatus.SERVING);
+    CustomerType customerType = servedCustomer.getCustomerType();
+    if (customerType != CustomerType.CASUAL && customerType != CustomerType.CONTRACT) {
+      throw new IllegalStateException(
+          String.format(
+              "Cannot serve %s customer at casual and contract service station!", customerType));
+    }
+
+    electroShopSimulation.setTicketMachineStopped(electroShopSimulation.isServiceQueueFull());
+
+    if ((!electroShopSimulation.isTicketMachineStopped())
+        && (!electroShopSimulation.isTicketQueueEmpty()) //TODO mozno vymazat
+        && (!electroShopSimulation.isTicketMachineServingCustomer())) {
+      electroShopSimulation.addEvent(new StartGettingTicketEvent(getTimestamp()));
+    }
+
+    ServiceStation serviceStation = electroShopSimulation.getFreeServiceStation(false);
+
+    if (serviceStation.isServing()) {
+      throw new IllegalStateException(
+          String.format(
+              "Cannot start service in casual and contract service station, because it is already serving at %f!",
+              getTimestamp()));
+    }
+
+    serviceStation.setServing(true, getTimestamp());
+    serviceStation.setCurrentServedCustomer(servedCustomer);
+    serviceStation.getEmployee().setStatus(EmployeeStatus.SERVING);
 
     servedCustomer.setTimeOfStartOfService(getTimestamp());
 
@@ -80,11 +128,11 @@ public class StartOfCasualAndContractCustomerServiceEvent extends Event {
         generateOrderSize(electroShopSimulation.getOrderSizeRandomGenerator().sample());
 
     servedCustomer.setOrderSize(orderSize);
-    servedCustomer.setServiceStationThatServedCustomer(freeServiceStation);
+    servedCustomer.setServiceStationThatServedCustomer(serviceStation);
 
     electroShopSimulation.addEvent(
         new EndOfCasualAndContractServiceEvent(
-            getTimestamp() + lengthOfService, servedCustomer, freeServiceStation));
+            getTimestamp() + lengthOfService, servedCustomer, serviceStation));
   }
 
   @Override
@@ -92,45 +140,5 @@ public class StartOfCasualAndContractCustomerServiceEvent extends Event {
     return String.format(
         "Serving %s customer at casual and contract service station at %s",
         servedCustomer.getCustomerType(), TimeFormatter.getFormattedTime(getTimestamp()));
-  }
-
-  private static OrderType generateOrderType(double generatedRandomValue) {
-    double cummulatedProbability = 0.0;
-    OrderType selectedOrderType = null;
-    for (int i = 0; i < OrderType.values().length; i++) {
-      OrderType orderType = OrderType.values()[i];
-
-      cummulatedProbability += orderType.getProbability();
-
-      if (generatedRandomValue <= cummulatedProbability) {
-        selectedOrderType = orderType;
-        break;
-      }
-    }
-
-    if (selectedOrderType == null) {
-      throw new IllegalStateException("No order type was selected!");
-    }
-    return selectedOrderType;
-  }
-
-  private static OrderSize generateOrderSize(double generatedRandomValue) {
-    double cummulatedProbability = 0.0;
-    OrderSize selectedOrderSize = null;
-    for (int i = 0; i < OrderSize.values().length; i++) {
-      OrderSize orderSize = OrderSize.values()[i];
-
-      cummulatedProbability += orderSize.getProbability();
-
-      if (generatedRandomValue <= cummulatedProbability) {
-        selectedOrderSize = orderSize;
-        break;
-      }
-    }
-
-    if (selectedOrderSize == null) {
-      throw new IllegalStateException("No order size was selected!");
-    }
-    return selectedOrderSize;
   }
 }

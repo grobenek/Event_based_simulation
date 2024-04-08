@@ -1,6 +1,7 @@
 package szathmary.peter.event.service.online;
 
 import szathmary.peter.event.Event;
+import szathmary.peter.event.ticketmachine.StartGettingTicketEvent;
 import szathmary.peter.simulation.ElectroShopSimulation;
 import szathmary.peter.simulation.SimulationCore;
 import szathmary.peter.simulation.entity.ServiceStation;
@@ -12,19 +13,18 @@ import szathmary.peter.util.TimeFormatter;
 
 /** Created by petos on 30/03/2024. */
 public class StartOnlineCustomerService extends Event {
-  private final Customer servedCustomer;
-  private final ServiceStation serviceStation;
 
-  public StartOnlineCustomerService(Double timestamp, Customer customerToServe, ServiceStation serviceStation) {
+  public StartOnlineCustomerService(Double timestamp) {
     super(timestamp);
+  }
 
-    if (serviceStation.isServing()) {
-      throw new IllegalStateException(String.format("Cannot start service in online service station, because it is already serving at %f!", getTimestamp()));
-    }
+  @Override
+  public void execute(SimulationCore simulationCore) {
+    ElectroShopSimulation electroShopSimulation = ((ElectroShopSimulation) simulationCore);
 
-    this.serviceStation = serviceStation;
+    Customer servedCustomer = electroShopSimulation.removeCustomerFromOnlineCustomerQueue();
 
-    CustomerType customerType = customerToServe.getCustomerType();
+    CustomerType customerType = servedCustomer.getCustomerType();
     if (customerType != CustomerType.ONLINE) {
       throw new IllegalArgumentException(
           String.format(
@@ -32,14 +32,24 @@ public class StartOnlineCustomerService extends Event {
               customerType, getTimestamp()));
     }
 
-    this.servedCustomer = customerToServe;
-  }
+    servedCustomer.setTimeOfEnteringServiceQueue(getTimestamp());
 
-  @Override
-  public void execute(SimulationCore simulationCore) {
-    ElectroShopSimulation electroShopSimulation = ((ElectroShopSimulation) simulationCore);
+    electroShopSimulation.setTicketMachineStopped(electroShopSimulation.isServiceQueueFull());
 
-//    ServiceStation freeServiceStation = electroShopSimulation.getFreeServiceStation(true);
+    if ((!electroShopSimulation.isTicketMachineStopped())
+        && (!electroShopSimulation.isTicketQueueEmpty()) //TODO mozno vymazat
+        && (!electroShopSimulation.isTicketMachineServingCustomer())) {
+      electroShopSimulation.addEvent(new StartGettingTicketEvent(getTimestamp()));
+    }
+
+    ServiceStation serviceStation = electroShopSimulation.getFreeServiceStation(true);
+
+    if (serviceStation.isServing()) {
+      throw new IllegalStateException(
+          String.format(
+              "Cannot start service in online service station, because it is already serving at %f!",
+              getTimestamp()));
+    }
 
     serviceStation.setServing(true, getTimestamp());
     serviceStation.setCurrentServedCustomer(servedCustomer);
@@ -70,7 +80,7 @@ public class StartOnlineCustomerService extends Event {
 
       cummulatedProbability += orderSize.getProbability();
 
-      if (sample <= cummulatedProbability) {
+      if (sample < cummulatedProbability) {
         selectedOrderSize = orderSize;
         break;
       }

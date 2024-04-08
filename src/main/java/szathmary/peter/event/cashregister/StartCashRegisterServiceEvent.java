@@ -10,20 +10,25 @@ import szathmary.peter.util.TimeFormatter;
 
 /** Created by petos on 31/03/2024. */
 public class StartCashRegisterServiceEvent extends Event {
-  private final Customer servedCustomer;
   private final CashRegister currentCashRegister;
+  private Customer servedCustomer;
 
-  public StartCashRegisterServiceEvent(
-      Double timestamp, Customer removedCustomerFromQueue, CashRegister currentCashRegister) {
+  public StartCashRegisterServiceEvent(Double timestamp, CashRegister currentCashRegister) {
     super(timestamp);
 
-    this.servedCustomer = removedCustomerFromQueue;
     this.currentCashRegister = currentCashRegister;
   }
 
   @Override
   public void execute(SimulationCore simulationCore) {
     ElectroShopSimulation electroShopSimulation = ((ElectroShopSimulation) simulationCore);
+
+    if (currentCashRegister.isServing()) {
+      throw new IllegalStateException(
+          "Cannot remove customer from cash register queue, becasue owning cash register is serving!");
+    }
+
+    servedCustomer = currentCashRegister.removeCustomerFromQueue();
 
     servedCustomer.setTimeOfStartCheckoutService(getTimestamp());
 

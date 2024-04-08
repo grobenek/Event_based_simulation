@@ -330,12 +330,12 @@ public class ElectroShopSimulation extends SimulationCore implements IReplicatio
     customer.setTimeOfEnteringTicketQueue(getCurrentTime());
     allCustomerList.add(customer);
 
+    ticketMachineQueue.add(customer);
+
     if (getCurrentTime() < CLOSING_HOURS_OF_TICKET_MACHINE) {
       ticketQueueLengthStatisticReplication.addObservation(
           ticketMachineQueue.size(), getCurrentTime());
     }
-
-    ticketMachineQueue.add(customer);
   }
 
   public Customer removeCustomerFromTicketQueue() {
@@ -518,7 +518,7 @@ public class ElectroShopSimulation extends SimulationCore implements IReplicatio
     for (int i = 0; i < numberOfCashRegisters; i++) {
       cummulatedProbability += 1.0 / numberOfCashRegisters;
 
-      if (sample <= cummulatedProbability) {
+      if (sample < cummulatedProbability) {
         selectedFreeCashRegister = i;
         break;
       }

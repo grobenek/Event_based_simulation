@@ -1,8 +1,8 @@
 package szathmary.peter.event.service;
 
 import szathmary.peter.event.Event;
-import szathmary.peter.event.service.casualandcontract.RemoveCustomerFromCasualAndContractQueueEvent;
-import szathmary.peter.event.service.online.RemoveCustomerFromOnlineQueueEvent;
+import szathmary.peter.event.service.casualandcontract.StartOfCasualAndContractCustomerServiceEvent;
+import szathmary.peter.event.service.online.StartOnlineCustomerService;
 import szathmary.peter.simulation.ElectroShopSimulation;
 import szathmary.peter.simulation.SimulationCore;
 import szathmary.peter.simulation.entity.customer.Customer;
@@ -42,11 +42,11 @@ public class EndOfGettingBigOrder extends Event {
     if (customer.getCustomerType() != CustomerType.ONLINE) {
       if (!electroShopSimulation.isCasualContractCustomerQueueEmpty()) {
         electroShopSimulation.addEvent(
-            new RemoveCustomerFromCasualAndContractQueueEvent(getTimestamp()));
+            new StartOfCasualAndContractCustomerServiceEvent(getTimestamp()));
       }
     } else {
       if (!electroShopSimulation.isOnlineCustomerQueueEmpty()) {
-        electroShopSimulation.addEvent(new RemoveCustomerFromOnlineQueueEvent(getTimestamp()));
+        electroShopSimulation.addEvent(new StartOnlineCustomerService(getTimestamp()));
       }
     }
   }

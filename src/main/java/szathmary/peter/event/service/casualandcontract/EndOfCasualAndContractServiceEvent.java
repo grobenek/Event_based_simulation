@@ -1,7 +1,7 @@
 package szathmary.peter.event.service.casualandcontract;
 
 import szathmary.peter.event.Event;
-import szathmary.peter.event.cashregister.RemoveCustomerFromCashRegisterQueue;
+import szathmary.peter.event.cashregister.StartCashRegisterServiceEvent;
 import szathmary.peter.simulation.ElectroShopSimulation;
 import szathmary.peter.simulation.SimulationCore;
 import szathmary.peter.simulation.entity.ServiceStation;
@@ -45,7 +45,7 @@ public class EndOfCasualAndContractServiceEvent extends Event {
 
     if (!cashRegisterToPutCustomerIn.isServing()) {
       electroShopSimulation.addEvent(
-          new RemoveCustomerFromCashRegisterQueue(getTimestamp(), cashRegisterToPutCustomerIn));
+          new StartCashRegisterServiceEvent(getTimestamp(), cashRegisterToPutCustomerIn));
     }
 
     if (servedCustomer.getOrderSize() == OrderSize.SMALL) {
@@ -55,7 +55,7 @@ public class EndOfCasualAndContractServiceEvent extends Event {
       // service of next customer is being planned
       if (!electroShopSimulation.isCasualContractCustomerQueueEmpty()) {
         electroShopSimulation.addEvent(
-            new RemoveCustomerFromCasualAndContractQueueEvent(getTimestamp()));
+            new StartOfCasualAndContractCustomerServiceEvent(getTimestamp()));
       }
     }
   }

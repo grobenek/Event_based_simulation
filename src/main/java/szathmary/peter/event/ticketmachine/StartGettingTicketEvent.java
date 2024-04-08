@@ -8,17 +8,21 @@ import szathmary.peter.util.TimeFormatter;
 
 /** Created by petos on 29/03/2024. */
 public class StartGettingTicketEvent extends Event {
-  private final Customer servedCustomer;
 
-  public StartGettingTicketEvent(Double timestamp, Customer removedCustomerFromTicketMachineQueue) {
+  public StartGettingTicketEvent(Double timestamp) {
     super(timestamp);
-
-    this.servedCustomer = removedCustomerFromTicketMachineQueue;
   }
 
   @Override
   public void execute(SimulationCore simulationCore) {
     ElectroShopSimulation electroShopSimulation = ((ElectroShopSimulation) simulationCore);
+
+    if (getTimestamp() >= ElectroShopSimulation.CLOSING_HOURS_OF_TICKET_MACHINE) {
+      removeCustomersAfterClosingHours(electroShopSimulation);
+      return; // TODO teoreticky tu chyba
+    }
+
+    Customer servedCustomer = electroShopSimulation.removeCustomerFromTicketQueue();
 
     electroShopSimulation.setTicketMachineServingCustomer(true);
 
@@ -29,6 +33,17 @@ public class StartGettingTicketEvent extends Event {
         new EndOfGettingTicketEvent(timeOfEndOfServingCustomer, servedCustomer);
 
     electroShopSimulation.addEvent(endOfGettingTicketEvent);
+  }
+
+  private void removeCustomersAfterClosingHours(ElectroShopSimulation electroShopSimulation) {
+    while (!electroShopSimulation.isTicketQueueEmpty()) {
+      Customer removedCustomer = electroShopSimulation.removeCustomerFromTicketQueue();
+      removedCustomer.setTimeOfLeavingSystem(ElectroShopSimulation.CLOSING_HOURS_OF_TICKET_MACHINE);
+    }
+
+    electroShopSimulation
+        .getTicketQueueLengthStatisticReplication()
+        .addObservation(0.0, ElectroShopSimulation.CLOSING_HOURS_OF_TICKET_MACHINE);
   }
 
   @Override

@@ -1,7 +1,7 @@
 package szathmary.peter.event.service.online;
 
 import szathmary.peter.event.Event;
-import szathmary.peter.event.cashregister.RemoveCustomerFromCashRegisterQueue;
+import szathmary.peter.event.cashregister.StartCashRegisterServiceEvent;
 import szathmary.peter.simulation.ElectroShopSimulation;
 import szathmary.peter.simulation.SimulationCore;
 import szathmary.peter.simulation.entity.ServiceStation;
@@ -35,9 +35,9 @@ public class EndOfOnlineServiceEvent extends Event {
 
     currentServiceStation.getEmployee().setStatus(EmployeeStatus.IDLE);
 
-    if (!cashRegisterToPutCustomerIn.isServing()) {
+    if ((!cashRegisterToPutCustomerIn.isServing())) {
       electroShopSimulation.addEvent(
-          new RemoveCustomerFromCashRegisterQueue(getTimestamp(), cashRegisterToPutCustomerIn));
+          new StartCashRegisterServiceEvent(getTimestamp(), cashRegisterToPutCustomerIn));
     }
 
     if (servedCustomer.getOrderSize() == OrderSize.SMALL) {
@@ -46,7 +46,7 @@ public class EndOfOnlineServiceEvent extends Event {
 
       // service of next customer is being planned
       if (!electroShopSimulation.isOnlineCustomerQueueEmpty()) {
-        electroShopSimulation.addEvent(new RemoveCustomerFromOnlineQueueEvent(getTimestamp()));
+        electroShopSimulation.addEvent(new StartOnlineCustomerService(getTimestamp()));
       }
     }
   }

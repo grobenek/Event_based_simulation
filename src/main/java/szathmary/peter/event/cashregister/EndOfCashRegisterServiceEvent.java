@@ -42,7 +42,7 @@ public class EndOfCashRegisterServiceEvent extends Event {
 
     if (!currentCashRegister.isQueueEmpty()) {
       simulationCore.addEvent(
-          new RemoveCustomerFromCashRegisterQueue(getTimestamp(), currentCashRegister));
+          new StartCashRegisterServiceEvent(getTimestamp(), currentCashRegister));
     }
   }
 
