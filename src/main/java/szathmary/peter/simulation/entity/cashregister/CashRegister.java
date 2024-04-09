@@ -12,10 +12,10 @@ import szathmary.peter.statistic.Statistic;
 public class CashRegister {
   private final Queue<Customer> cashRegisterQueue;
   private final Employee employee;
-  private boolean isServing;
-  private Customer currentServedCustomer;
   private final String name;
   private final ContinuousStatistic averageWorkloadOfCashRegister;
+  private boolean isServing;
+  private Customer currentServedCustomer;
 
   public CashRegister(String name) {
     this.name = name;

@@ -21,6 +21,7 @@ public class SimulationModel implements IModel {
   public void startSimulation() {
     electroShopSimulation.startSimulation();
   }
+
   @Override
   public void setParameters(SimulationParameters simulationParameters) {
     if (electroShopSimulation != null) {

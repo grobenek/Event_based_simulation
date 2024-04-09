@@ -12,7 +12,9 @@ public class InitialEvent extends Event {
   @Override
   public void execute(SimulationCore simulationCore) {
     ElectroShopSimulation electroShopSimulation = ((ElectroShopSimulation) simulationCore);
-    double timestampOfNextArrival = electroShopSimulation.getTimeBetweenCustomerArrivalsRandomGenerator().sample() + getTimestamp();
+    double timestampOfNextArrival =
+        electroShopSimulation.getTimeBetweenCustomerArrivalsRandomGenerator().sample()
+            + getTimestamp();
 
     if (timestampOfNextArrival < ElectroShopSimulation.CLOSING_HOURS_OF_TICKET_MACHINE) {
       Event customerArrivalEvent = new CustomerArrivalInSystemEvent(timestampOfNextArrival);

@@ -30,7 +30,7 @@ public class EndOfGettingBigOrder extends Event {
   public void execute(SimulationCore simulationCore) {
     ElectroShopSimulation electroShopSimulation = ((ElectroShopSimulation) simulationCore);
 
-    customer.getServiceStationThatServedCustomer().setServing(false, getTimestamp()); //TODO mozno sa nezaratava do statistiky ako ze je serving?
+    customer.getServiceStationThatServedCustomer().setServing(false, getTimestamp());
     customer.getServiceStationThatServedCustomer().setCurrentServedCustomer(null);
 
     customer.setTimeOfLeavingSystem(getTimestamp());
@@ -42,7 +42,10 @@ public class EndOfGettingBigOrder extends Event {
     if (customer.getCustomerType() != CustomerType.ONLINE) {
       if (!electroShopSimulation.isCasualContractCustomerQueueEmpty()) {
         electroShopSimulation.addEvent(
-            new StartOfCasualAndContractCustomerServiceEvent(getTimestamp()));
+            new StartOfCasualAndContractCustomerServiceEvent(
+                getTimestamp(),
+                electroShopSimulation.getFreeServiceStation(false),
+                electroShopSimulation.removeCustomerFromCasualAndContractCustomerQueue()));
       }
     } else {
       if (!electroShopSimulation.isOnlineCustomerQueueEmpty()) {
@@ -54,14 +57,18 @@ public class EndOfGettingBigOrder extends Event {
   private void updateStatistics(ElectroShopSimulation electroShopSimulation) {
     electroShopSimulation
         .getTimeInSystemStatisticReplications()
-        .addObservation(customer.getTimeOfLeavingSystem() - customer.getTimeOfArrival());
+        .addObservation(
+            Math.abs(customer.getTimeOfLeavingSystem() - customer.getTimeOfArrival()) / 60.0);
 
     if (customer.getTimeOfLeavingTicketQueue()
         < ElectroShopSimulation.CLOSING_HOURS_OF_TICKET_MACHINE) {
       electroShopSimulation
           .getTimeInTicketQueueStatisticReplications()
           .addObservation(
-              customer.getTimeOfLeavingTicketQueue() - customer.getTimeOfEnteringTicketQueue());
+              Math.abs(
+                      customer.getTimeOfLeavingTicketQueue()
+                          - customer.getTimeOfEnteringTicketQueue())
+                  / 60.0);
     }
   }
 

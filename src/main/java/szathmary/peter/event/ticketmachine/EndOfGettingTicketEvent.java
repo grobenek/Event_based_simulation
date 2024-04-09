@@ -70,7 +70,10 @@ public class EndOfGettingTicketEvent extends Event {
       case CASUAL, CONTRACT -> {
         if (electroShopSimulation.isAtLeastOneServiceFree(false)) {
           electroShopSimulation.addEvent(
-              new StartOfCasualAndContractCustomerServiceEvent(getTimestamp()));
+              new StartOfCasualAndContractCustomerServiceEvent(
+                  getTimestamp(),
+                  electroShopSimulation.getFreeServiceStation(false),
+                  electroShopSimulation.removeCustomerFromCasualAndContractCustomerQueue()));
           wasCustomerPutTuServiceStation = true;
         }
       }
@@ -92,7 +95,7 @@ public class EndOfGettingTicketEvent extends Event {
         && (!electroShopSimulation.isTicketMachineServingCustomer())
         && (!electroShopSimulation.isTicketQueueEmpty())) {
       electroShopSimulation.addEvent(new StartGettingTicketEvent(getTimestamp()));
-    } // TODO mozno tu chyba
+    }
   }
 
   @Override

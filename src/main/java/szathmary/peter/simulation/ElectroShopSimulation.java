@@ -111,13 +111,14 @@ public class ElectroShopSimulation extends SimulationCore implements IReplicatio
     initializeVariables();
 
     this.timeInSystemStatisticReplications =
-        new DiscreteStatistic("Time in system - replication", false);
-    this.timeInSystemStatisticSummary = new DiscreteStatistic("Time in system - summary", false);
+        new DiscreteStatistic("Time in system in minutes - replication", false);
+    this.timeInSystemStatisticSummary =
+        new DiscreteStatistic("Time in system in minutes - summary", false);
 
     this.timeInTicketQueueStatisticReplications =
-        new DiscreteStatistic("Time in ticket queue - replication", false);
+        new DiscreteStatistic("Time in ticket queue in minutes - replication", false);
     this.timeInTicketQueueStatisticSummary =
-        new DiscreteStatistic("Time in ticket queue - summary", false);
+        new DiscreteStatistic("Time in ticket queue in minutes - summary", false);
 
     this.ticketQueueLengthStatisticReplication =
         new ContinuousStatistic("Ticket queue length - replication", false);

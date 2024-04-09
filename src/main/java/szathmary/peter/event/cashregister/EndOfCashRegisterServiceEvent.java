@@ -40,7 +40,7 @@ public class EndOfCashRegisterServiceEvent extends Event {
     currentCashRegister.setServing(false, getTimestamp());
     currentCashRegister.setCurrentServedCustomer(null);
 
-    if (!currentCashRegister.isQueueEmpty()) {
+    if (!currentCashRegister.isQueueEmpty() && (!currentCashRegister.isServing())) {
       simulationCore.addEvent(
           new StartCashRegisterServiceEvent(getTimestamp(), currentCashRegister));
     }
@@ -50,15 +50,18 @@ public class EndOfCashRegisterServiceEvent extends Event {
     electroShopSimulation
         .getTimeInSystemStatisticReplications()
         .addObservation(
-            servedCustomer.getTimeOfLeavingSystem() - servedCustomer.getTimeOfArrival());
+            (Math.abs(servedCustomer.getTimeOfLeavingSystem() - servedCustomer.getTimeOfArrival())
+                / 60));
 
     if (servedCustomer.getTimeOfLeavingTicketQueue()
         < ElectroShopSimulation.CLOSING_HOURS_OF_TICKET_MACHINE) {
       electroShopSimulation
           .getTimeInTicketQueueStatisticReplications()
           .addObservation(
-              servedCustomer.getTimeOfLeavingTicketQueue()
-                  - servedCustomer.getTimeOfEnteringTicketQueue());
+              Math.abs(
+                      servedCustomer.getTimeOfLeavingTicketQueue()
+                          - servedCustomer.getTimeOfEnteringTicketQueue())
+                  / 60.0);
     }
   }
 

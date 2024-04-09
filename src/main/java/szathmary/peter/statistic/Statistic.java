@@ -4,8 +4,6 @@ import szathmary.peter.util.TimeFormatter;
 
 /** Created by petos on 19/03/2024. */
 public abstract class Statistic {
-  private static final double T_ALPHA_SCORE_FOR_95_PERCENT_CONFIDENCE_INTERVAL =
-      1.96; // TODO porozmyslat ci tu nechat studentovo skore ci nie
   private static final double Z_SCORE_FOR_95_PERCENT_CONFIDENCE_INTERVAL = 1.96;
   private final String name;
   private final boolean formatAsTime;
@@ -77,14 +75,14 @@ public abstract class Statistic {
     return sum;
   }
 
-  public double[] getConfidenceInterval(double tAlphaScore, double zAlphaScore) {
-    if (Double.isInfinite(mean)) {
+  public double[] getConfidenceInterval(double zAlphaScore) {
+    if (Double.isInfinite(mean) || getCoutnOfObservations() < 30) {
       return new double[] {Double.NEGATIVE_INFINITY, Double.POSITIVE_INFINITY};
     }
 
-    double score = count <= 30 ? tAlphaScore : zAlphaScore;
-    double upperInterval = mean + ((sampleStandardDeviation * score) / Math.sqrt(count));
-    double lowerInterval = mean - ((sampleStandardDeviation * score) / Math.sqrt(count));
+    double value = (sampleStandardDeviation * zAlphaScore) / Math.sqrt(count);
+    double upperInterval = mean + value;
+    double lowerInterval = mean - value;
 
     return new double[] {lowerInterval, upperInterval};
   }
@@ -99,7 +97,7 @@ public abstract class Statistic {
 
   @Override
   public String toString() {
-    double[] confidenceInterval = getConfidenceInterval(T_ALPHA_SCORE_FOR_95_PERCENT_CONFIDENCE_INTERVAL, Z_SCORE_FOR_95_PERCENT_CONFIDENCE_INTERVAL);
+    double[] confidenceInterval = getConfidenceInterval(Z_SCORE_FOR_95_PERCENT_CONFIDENCE_INTERVAL);
 
     if (formatAsTime) {
       return "Statistic: %s {\n, count = %d\n, min = %s\n, max = %s\n, sum = %.02f seconds\n, mean = %s\n, Sample standard deviation = %.2f seconds\n, 95%% confidence interval = [%s, %s]\n}\n"

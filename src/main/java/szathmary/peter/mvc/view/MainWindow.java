@@ -73,8 +73,7 @@ public class MainWindow extends JFrame implements IMainWindow {
     this.controller = controller;
     this.controller.attach(this);
 
-    setContentPane(
-        mainWindowPanel); // TODO spravit graf - potom vytazenost raodv aj vsetkeho + interval
+    setContentPane(mainWindowPanel);
     // spolahlivosti
     setTitle("Event oriented simulation");
     setDefaultCloseOperation(EXIT_ON_CLOSE);
@@ -188,7 +187,7 @@ public class MainWindow extends JFrame implements IMainWindow {
       List<CashRegister> cashRegisters = simulationOverview.cashRegisters();
       cashRegistersTableModel.setCashRegisters(cashRegisters);
 
-        serviceStationsTableModel.setServiceStations(simulationOverview.serviceStations());
+      serviceStationsTableModel.setServiceStations(simulationOverview.serviceStations());
     } else {
       replicationStatisticTextArea.setEnabled(false);
       customerTable.setEnabled(false);
@@ -240,6 +239,21 @@ public class MainWindow extends JFrame implements IMainWindow {
     simulationWorker =
         new SwingWorker<>() {
           @Override
+          protected void done() {
+            super.done();
+            SwingUtilities.invokeLater(
+                () -> {
+                  tabPane.setEnabled(true);
+                  startSimulationButton.setEnabled(false);
+                  stopSimulationButton.setEnabled(false);
+                  setParametersButton.setEnabled(true);
+                  numberOfCashRegistersTextField.setEnabled(true);
+                  numberOfServiceStationsTextField.setEnabled(true);
+                  numberOfReplicationsTextField.setEnabled(true);
+                });
+          }
+
+          @Override
           protected Void doInBackground() {
             try {
               controller.startSimulation();
@@ -274,7 +288,7 @@ public class MainWindow extends JFrame implements IMainWindow {
 
   @Override
   public void setInspectReplication(boolean verbose) {
-    controller.setInspectReplication(verbose);
+    controller.setVerboseSimulation(verbose);
   }
 
   private void startPrintingCorrelationChart() {

@@ -142,7 +142,7 @@ public final class Customer implements Comparable<Customer> {
     if (customerType == CustomerType.CONTRACT) {
       return -1;
     } else {
-      return 1; //TODO pozriet ci dobra hodnota
+      return 1;
     }
   }
 }

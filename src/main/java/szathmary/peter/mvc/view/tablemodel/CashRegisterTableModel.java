@@ -41,7 +41,8 @@ public class CashRegisterTableModel extends AbstractTableModel {
         return cashRegister.getQueueLength();
       }
       case 2 -> {
-        return String.format("%.2f", cashRegister.getAverageWorkloadOfCashRegister().getMean() * 100);
+        return String.format(
+            "%.2f", cashRegister.getAverageWorkloadOfCashRegister().getMean() * 100);
       }
       default -> throw new IllegalStateException("Selecting unknown column!");
     }

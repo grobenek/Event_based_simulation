@@ -35,7 +35,8 @@ public class EndOfOnlineServiceEvent extends Event {
 
     currentServiceStation.getEmployee().setStatus(EmployeeStatus.IDLE);
 
-    if ((!cashRegisterToPutCustomerIn.isServing())) {
+    if ((!cashRegisterToPutCustomerIn.isServing())
+        && (!cashRegisterToPutCustomerIn.isQueueEmpty())) {
       electroShopSimulation.addEvent(
           new StartCashRegisterServiceEvent(getTimestamp(), cashRegisterToPutCustomerIn));
     }
@@ -53,6 +54,7 @@ public class EndOfOnlineServiceEvent extends Event {
 
   @Override
   public String getEventDescription() {
-    return String.format("Ending online customer service at %s!", TimeFormatter.getFormattedTime(getTimestamp()));
+    return String.format(
+        "Ending online customer service at %s!", TimeFormatter.getFormattedTime(getTimestamp()));
   }
 }

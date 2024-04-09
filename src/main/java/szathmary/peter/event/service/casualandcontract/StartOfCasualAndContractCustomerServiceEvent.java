@@ -14,10 +14,14 @@ import szathmary.peter.util.TimeFormatter;
 
 /** Created by petos on 30/03/2024. */
 public class StartOfCasualAndContractCustomerServiceEvent extends Event {
-  private Customer servedCustomer;
+  private final Customer servedCustomer;
+  private final ServiceStation serviceStation;
 
-  public StartOfCasualAndContractCustomerServiceEvent(Double timestamp) {
+  public StartOfCasualAndContractCustomerServiceEvent(
+      Double timestamp, ServiceStation serviceStation, Customer customer) {
     super(timestamp);
+    this.serviceStation = serviceStation;
+    this.servedCustomer = customer;
   }
 
   private static OrderType generateOrderType(double generatedRandomValue) {
@@ -64,8 +68,6 @@ public class StartOfCasualAndContractCustomerServiceEvent extends Event {
   public void execute(SimulationCore simulationCore) {
     ElectroShopSimulation electroShopSimulation = ((ElectroShopSimulation) simulationCore);
 
-    servedCustomer = electroShopSimulation.removeCustomerFromCasualAndContractCustomerQueue();
-
     CustomerType customerType = servedCustomer.getCustomerType();
     if (customerType != CustomerType.CASUAL && customerType != CustomerType.CONTRACT) {
       throw new IllegalStateException(
@@ -76,12 +78,10 @@ public class StartOfCasualAndContractCustomerServiceEvent extends Event {
     electroShopSimulation.setTicketMachineStopped(electroShopSimulation.isServiceQueueFull());
 
     if ((!electroShopSimulation.isTicketMachineStopped())
-        && (!electroShopSimulation.isTicketQueueEmpty()) //TODO mozno vymazat
+        && (!electroShopSimulation.isTicketQueueEmpty())
         && (!electroShopSimulation.isTicketMachineServingCustomer())) {
       electroShopSimulation.addEvent(new StartGettingTicketEvent(getTimestamp()));
     }
-
-    ServiceStation serviceStation = electroShopSimulation.getFreeServiceStation(false);
 
     if (serviceStation.isServing()) {
       throw new IllegalStateException(

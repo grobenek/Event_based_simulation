@@ -37,7 +37,7 @@ public class StartOnlineCustomerService extends Event {
     electroShopSimulation.setTicketMachineStopped(electroShopSimulation.isServiceQueueFull());
 
     if ((!electroShopSimulation.isTicketMachineStopped())
-        && (!electroShopSimulation.isTicketQueueEmpty()) //TODO mozno vymazat
+        && (!electroShopSimulation.isTicketQueueEmpty())
         && (!electroShopSimulation.isTicketMachineServingCustomer())) {
       electroShopSimulation.addEvent(new StartGettingTicketEvent(getTimestamp()));
     }

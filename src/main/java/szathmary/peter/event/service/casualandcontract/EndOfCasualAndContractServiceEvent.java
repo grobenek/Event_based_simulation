@@ -43,7 +43,8 @@ public class EndOfCasualAndContractServiceEvent extends Event {
     cashRegisterToPutCustomerIn.addCustomerToQueue(servedCustomer);
     currentServiceStation.getEmployee().setStatus(EmployeeStatus.IDLE);
 
-    if (!cashRegisterToPutCustomerIn.isServing()) {
+    if ((!cashRegisterToPutCustomerIn.isServing())
+        && (!cashRegisterToPutCustomerIn.isQueueEmpty())) {
       electroShopSimulation.addEvent(
           new StartCashRegisterServiceEvent(getTimestamp(), cashRegisterToPutCustomerIn));
     }
@@ -55,7 +56,10 @@ public class EndOfCasualAndContractServiceEvent extends Event {
       // service of next customer is being planned
       if (!electroShopSimulation.isCasualContractCustomerQueueEmpty()) {
         electroShopSimulation.addEvent(
-            new StartOfCasualAndContractCustomerServiceEvent(getTimestamp()));
+            new StartOfCasualAndContractCustomerServiceEvent(
+                getTimestamp(),
+                electroShopSimulation.getFreeServiceStation(false),
+                electroShopSimulation.removeCustomerFromCasualAndContractCustomerQueue()));
       }
     }
   }

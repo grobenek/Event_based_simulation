@@ -1,14 +1,13 @@
 package szathmary.peter.mvc.view.tablemodel;
 
-import szathmary.peter.simulation.entity.ServiceStation;
-
-import javax.swing.table.AbstractTableModel;
 import java.util.ArrayList;
 import java.util.List;
+import javax.swing.table.AbstractTableModel;
+import szathmary.peter.simulation.entity.ServiceStation;
 
 /** Created by petos on 01/04/2024. */
 public class ServiceStationTableModel extends AbstractTableModel {
-  private static final String[] COLUMN_NAMES = {"Name", "Work load"}; // TODO toto teoreticky netreba
+  private static final String[] COLUMN_NAMES = {"Name", "Work load"};
   private List<ServiceStation> serviceStationList;
 
   public ServiceStationTableModel(int serviceStationsQueueLength) {

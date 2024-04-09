@@ -19,7 +19,7 @@ public class StartGettingTicketEvent extends Event {
 
     if (getTimestamp() >= ElectroShopSimulation.CLOSING_HOURS_OF_TICKET_MACHINE) {
       removeCustomersAfterClosingHours(electroShopSimulation);
-      return; // TODO teoreticky tu chyba
+      return;
     }
 
     Customer servedCustomer = electroShopSimulation.removeCustomerFromTicketQueue();
